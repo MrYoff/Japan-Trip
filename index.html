@@ -19,6 +19,7 @@ input,select,textarea{padding:8px;border:1px solid var(--line);border-radius:8px
 #map{height:520px;border-radius:12px;border:1px solid var(--line)} .pin{font-size:18px;text-align:center;line-height:30px;width:30px;height:30px;border-radius:50%;background:#fff;border:2px solid #102a4c}
 .legend{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:10px 0}
 .stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;min-width:180px;flex:1}.stats{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}.stat b{font-size:22px;display:block}
+.res{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
 .day{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:10px 0}
 label.chk{display:block;padding:6px 0}
 </style></head><body>
@@ -29,12 +30,16 @@ label.chk{display:block;padding:6px 0}
 </nav>
 <main>
 <section id="ideas" class="active">
-<div><input id="q" type="search" placeholder="Search places, notes…" size="28">
+<div class="day" id="addBox"><h3 style="margin-top:4px">🔎 Find a place in Japan</h3>
+<form id="findForm"><input id="findQ" type="search" placeholder="e.g. Ichiran Shibuya, teamLab, Fushimi Inari" size="34" required><button class="btn">Search</button></form>
+<div id="findResults"></div>
+<h3 style="margin-top:14px">➕ Add it to the plan</h3><p class="small" id="pickedNote"></p><form id="addForm"><input name="title" required placeholder="Title"><input name="city" required placeholder="City"><select name="category"><option>Sight</option><option>Food</option><option>Shopping</option><option>History</option><option>Experience</option><option>Transport</option></select><input name="trip_date" type="date"><input name="estimated_cost_yen" type="number" placeholder="Cost ¥" min="0"><select name="priority"><option value="nice-to-have">Nice-to-have</option><option value="must-do">★ Must-do</option></select><br><textarea name="notes" rows="2" cols="60" placeholder="Notes"></textarea><br><button class="btn" type="submit">Add idea</button></form><p class="small">Or skip the search and just type a title and city.</p></div>
+<h3>Search your plan</h3><div><input id="q" type="search" placeholder="Search saved places, notes…" size="28">
 <select id="fCity"><option value="">All cities</option></select><select id="fCat"><option value="">All categories</option></select>
 <select id="fPri"><option value="">All priorities</option><option value="must-do">★ Must-do</option><option value="nice-to-have">Nice-to-have</option></select></div>
 <div class="stats"><div class="stat"><b id="stCount">–</b>Places</div><div class="stat"><b id="stMust">–</b>Must-dos</div><div class="stat"><b id="stCost">–</b>Priced ideas / person</div></div>
 <div id="cards" class="grid"></div>
-<h3>Add an idea</h3><form id="addForm"><input name="title" required placeholder="Title"><input name="city" required placeholder="City"><input name="category" placeholder="Category (Sight, Food…)"><input name="trip_date" type="date"><input name="estimated_cost_yen" type="number" placeholder="Cost ¥" min="0"><select name="priority"><option value="nice-to-have">Nice-to-have</option><option value="must-do">★ Must-do</option></select><br><textarea name="notes" rows="2" cols="60" placeholder="Notes"></textarea><br><button class="btn" type="submit">Add idea</button></form>
+
 <p class="small">Ideas, expenses and checklists are shared with everyone who has the link once Firebase is connected (status shown at the top).</p>
 </section>
 
@@ -116,7 +121,9 @@ function save(){store.set('ideas',ideas);store.set('expenses',expenses);store.se
  if(tripDoc)tripDoc.set({ideas,expenses,reminders:doneR,checks:doneC,updated:Date.now()}).catch(e=>setSync('⚠️ Save failed: '+e.message))}
 function setSync(t){const el=document.getElementById('sync');if(el)el.textContent=t}
 function startSync(){
- if(!FIREBASE_CONFIG||!window.firebase){setSync('💾 Saved on this device only');return}
+ if(!FIREBASE_CONFIG){setSync('💾 Saved on this device only');return}
+ if(!window.firebase){setSync('⚠️ Could not load Firebase — check your connection and refresh');return}
+ setSync('⏳ Connecting…');
  try{firebase.initializeApp(FIREBASE_CONFIG);tripDoc=firebase.firestore().collection('trips').doc('japan-2027');
   let first=true;
   tripDoc.onSnapshot(snap=>{
@@ -144,7 +151,7 @@ function render(){
  $('days').innerHTML=Object.entries(by).map(([d,arr])=>`<div class="day"><h3>${d}</h3>${arr.map(i=>`<p>${SHAPE[i.category]||'●'} <strong>${i.title}</strong> — ${i.city} · ${YEN(i.estimated_cost_yen||0)}${i.priority==='must-do'?' · ★ Must-do':''}</p>`).join('')}</div>`).join('');
  // map list
  $('mapList').innerHTML='<h3>All mapped / listed places</h3>'+ideas.map(i=>`<p>${SHAPE[i.category]||'●'} <strong>${i.title}</strong> — ${i.place_label||i.city}</p>`).join('');
- renderBudget(); renderReminders(); renderChecks(); renderExpenses();
+ drawPins(); renderBudget(); renderReminders(); renderChecks(); renderExpenses();
 }
 window.delIdea=id=>{if(confirm('Delete this idea?')){ideas=ideas.filter(i=>i.id!==id);save();render()}};
 function renderBudget(){
@@ -156,13 +163,22 @@ function renderBudget(){
 function renderReminders(){$('reminders').innerHTML=reminders.map((r,ix)=>`<label class="chk"><input type="checkbox" ${doneR[ix]?'checked':''} onchange="doneR[${ix}]=this.checked;save()"> <strong>${r[0]}</strong> — ${r[1]}<br><span class="small">${r[2]}</span></label>`).join('')}
 function renderChecks(){$('checks').innerHTML=checkItems.map((c,ix)=>`<label class="chk"><input type="checkbox" ${doneC[ix]?'checked':''} onchange="doneC[${ix}]=this.checked;save()"> ${c}</label>`).join('')}
 function renderExpenses(){$('expList').innerHTML=expenses.length?('<table><tr><th>Item</th><th>¥</th><th>$</th></tr>'+expenses.map(e=>`<tr><td>${esc(e.label)}</td><td>${YEN(e.amount_yen)}</td><td>${USD(e.amount_yen/RATE)}</td></tr>`).join('')+`<tr><th>Total</th><th>${YEN(expenses.reduce((s,e)=>s+Number(e.amount_yen),0))}</th><th>${USD(expenses.reduce((s,e)=>s+Number(e.amount_yen),0)/RATE)}</th></tr></table>`):'<p class="small">No expenses recorded yet.</p>'}
-let mapDone=false; function initMap(){if(mapDone||!window.L)return; mapDone=true; const m=L.map('map').setView([36.2,138.25],6); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(m);
- ideas.filter(i=>i.latitude&&i.longitude).forEach(i=>{const ic=L.divIcon({className:'',html:`<div class="pin">${SHAPE[i.category]||'●'}</div>`,iconSize:[30,30]}); L.marker([i.latitude,i.longitude],{icon:ic}).addTo(m).bindPopup(`<strong>${i.title}</strong><br>${i.city} · ${i.category}<br>${i.notes}`)});
+let mapDone=false,mapObj=null,pinLayer=null; function initMap(){if(mapDone||!window.L)return; mapDone=true; const m=mapObj=L.map('map').setView([36.2,138.25],6); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(m);
+ pinLayer=L.layerGroup().addTo(m); drawPins();
  // Shinkansen route (schematic line Tokyo → Kyoto, as in the planner)
  L.polyline([[35.68,139.69],[35.44,136.88],[34.99,135.76]],{color:'#2563eb',weight:3,dashArray:'6 6'}).addTo(m).bindPopup('Tokaido Shinkansen: Tokyo → Kyoto');
 }
+function drawPins(){if(!pinLayer)return;pinLayer.clearLayers();ideas.filter(i=>i.latitude&&i.longitude).forEach(i=>{const ic=L.divIcon({className:'',html:`<div class="pin">${SHAPE[i.category]||'●'}</div>`,iconSize:[30,30]});L.marker([i.latitude,i.longitude],{icon:ic}).addTo(pinLayer).bindPopup(`<strong>${esc(i.title)}</strong><br>${esc(i.city)} · ${esc(i.category)}<br>${esc(i.notes)}`)})}
 ['q','fCity','fCat','fPri'].forEach(id=>$(id).addEventListener('input',render));
-$('addForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target);ideas.push({id:Date.now(),title:f.get('title'),city:f.get('city'),category:f.get('category')||'Sight',trip_date:f.get('trip_date'),priority:f.get('priority'),estimated_cost_yen:Number(f.get('estimated_cost_yen')||0),cost_note:'',notes:f.get('notes')||'',website_url:'',place_label:f.get('city'),latitude:null,longitude:null,image_url:''});save();e.target.reset();render()};
+let picked=null;
+$('findForm').onsubmit=async e=>{e.preventDefault();const q=$('findQ').value.trim();if(!q)return;$('findResults').innerHTML='<p class="small">Searching…</p>';
+ try{const r=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&countrycodes=jp&accept-language=en&q='+encodeURIComponent(q));const res=await r.json();window._res=res;
+  $('findResults').innerHTML=res.length?res.map((x,ix)=>`<div class="res"><div><strong>${esc(x.name||x.display_name.split(',')[0])}</strong><br><span class="small">${esc(x.display_name)}</span></div><button class="btn" type="button" onclick="pick(${ix})">Use</button></div>`).join(''):'<p class="small">Nothing found — try a simpler name, or add it by hand below.</p>'}
+ catch(err){$('findResults').innerHTML='<p class="small">Search is unavailable right now — add it by hand below.</p>'}};
+window.pick=ix=>{const x=window._res[ix],a=x.address||{},f=$('addForm');picked={lat:+x.lat,lng:+x.lon,label:x.display_name};
+ f.title.value=x.name||x.display_name.split(',')[0];f.city.value=a.city||a.town||a.village||a.county||a.state||'';
+ $('pickedNote').textContent='📍 '+x.display_name+' — will show on the map';$('findResults').innerHTML='';f.title.focus()};
+$('addForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target);ideas.push({id:Date.now(),title:f.get('title'),city:f.get('city'),category:f.get('category')||'Sight',trip_date:f.get('trip_date'),priority:f.get('priority'),estimated_cost_yen:Number(f.get('estimated_cost_yen')||0),cost_note:'',notes:f.get('notes')||'',website_url:'',place_label:picked?picked.label:f.get('city'),latitude:picked?picked.lat:null,longitude:picked?picked.lng:null,image_url:''});picked=null;$('pickedNote').textContent='';save();e.target.reset();filters();render()};
 $('expForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target);expenses.push({label:f.get('label'),amount_yen:Number(f.get('amount_yen'))});save();e.target.reset();renderExpenses()};
 $('yenIn').addEventListener('input',e=>{$('usdOut').textContent=USD(Number(e.target.value||0)/RATE)});
 $('recalc').onclick=renderBudget; $('resetChecks').onclick=()=>{doneC={};save();renderChecks()};
