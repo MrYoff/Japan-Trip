@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Japan Trip Planner</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--blue:#2563eb;--amber:#d97706;--ink:#17202a;--mut:#5b6b7f;--line:#d5dbe3;--bg:#f6f8fb}
+*{box-sizing:border-box}body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;color:var(--ink);background:var(--bg)}
+header{background:#102a4c;color:#fff;padding:20px}header h1{margin:0 0 4px;font-size:26px}header p{margin:2px 0;color:#cfe0f5}
+nav{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:8px 12px;z-index:1000;display:flex;gap:8px;flex-wrap:wrap}
+nav button,.btn{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;cursor:pointer;font-weight:600}
+nav button.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+main{max-width:1100px;margin:0 auto;padding:16px}section{display:none}section.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}.card .body{padding:12px 14px}.card img{width:100%;height:170px;object-fit:cover;display:block;background:#e8eef6}
+.noimg{height:170px;display:flex;align-items:center;justify-content:center;background:#e8eef6;color:var(--mut);font-weight:700;letter-spacing:.08em}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.8em;font-weight:700;margin:0 6px 6px 0}.must{background:#dbeafe;border:1px solid var(--blue)}.nice{background:#fef3c7;border:1px solid var(--amber)}
+.cat{background:#eef2f7;border:1px solid var(--line)} .small{font-size:.92em;color:var(--mut)}
+input,select,textarea{padding:8px;border:1px solid var(--line);border-radius:8px;margin:4px 4px 4px 0}table{border-collapse:collapse;width:100%;background:#fff}th,td{border:1px solid var(--line);padding:8px;text-align:left;vertical-align:top}th{background:#eff6ff}
+#map{height:520px;border-radius:12px;border:1px solid var(--line)} .pin{font-size:18px;text-align:center;line-height:30px;width:30px;height:30px;border-radius:50%;background:#fff;border:2px solid #102a4c}
+.legend{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:10px 0}
+.stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;min-width:180px;flex:1}.stats{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}.stat b{font-size:22px;display:block}
+.day{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:10px 0}
+label.chk{display:block;padding:6px 0}
+</style></head><body>
+<header><h1>🌸 Japan Trip Planner</h1><p>March 19–28, 2027 · 4 travelers · Cherry blossoms &amp; Mount Fuji</p><p>Tokyo → Kawaguchiko → Kyoto → Nara / Osaka · No car — trains &amp; transit</p></header>
+<nav><span id="sync" class="small" style="align-self:center;margin-right:8px">…</span>
+<button data-tab="ideas" class="active">Ideas</button><button data-tab="map">Map</button><button data-tab="itinerary">Itinerary</button>
+<button data-tab="budget">Budget</button><button data-tab="bookings">Booking Deadlines</button><button data-tab="prep">Prep</button>
+</nav>
+<main>
+<section id="ideas" class="active">
+<div><input id="q" type="search" placeholder="Search places, notes…" size="28">
+<select id="fCity"><option value="">All cities</option></select><select id="fCat"><option value="">All categories</option></select>
+<select id="fPri"><option value="">All priorities</option><option value="must-do">★ Must-do</option><option value="nice-to-have">Nice-to-have</option></select></div>
+<div class="stats"><div class="stat"><b id="stCount">–</b>Places</div><div class="stat"><b id="stMust">–</b>Must-dos</div><div class="stat"><b id="stCost">–</b>Priced ideas / person</div></div>
+<div id="cards" class="grid"></div>
+<h3>Add an idea</h3><form id="addForm"><input name="title" required placeholder="Title"><input name="city" required placeholder="City"><input name="category" placeholder="Category (Sight, Food…)"><input name="trip_date" type="date"><input name="estimated_cost_yen" type="number" placeholder="Cost ¥" min="0"><select name="priority"><option value="nice-to-have">Nice-to-have</option><option value="must-do">★ Must-do</option></select><br><textarea name="notes" rows="2" cols="60" placeholder="Notes"></textarea><br><button class="btn" type="submit">Add idea</button></form>
+<p class="small">Ideas, expenses and checklists are shared with everyone who has the link once Firebase is connected (status shown at the top).</p>
+</section>
+
+<section id="map"><div class="legend"><strong>Legend — pins use different shapes/symbols per category (colorblind-safe):</strong><br>▲ Sight · ■ Food · ◆ Shopping · ★ History · ● Experience · ➤ Transport</div><div id="map"></div><div id="mapList"></div></section>
+
+<section id="itinerary"><h2>Day by day</h2><div id="days"></div></section>
+
+<section id="budget"><h2>Budget</h2>
+<div class="stats"><div class="stat"><b id="bLodging">–</b>Lodging (9 nights)</div><div class="stat"><b id="bDaily">–</b>Daily costs, family × 10 days</div><div class="stat"><b id="bFlights">–</b>Flights, family of 4</div><div class="stat"><b id="bIdeas">–</b>Priced ideas, family of 4</div></div>
+<h3>Yen → Dollar converter</h3><p>Reference rate (Nov 4, 2026, Frankfurter): ¥<span id="rate">158.27</span> = $1</p><input id="yenIn" type="number" placeholder="¥ amount"> = <strong id="usdOut">$0.00</strong>
+<h3>Lodging plan</h3><div id="lodgingTable"></div>
+<h3>Daily assumptions</h3><p>Per person per day — Breakfast (konbini): <input id="dB" type="number" value="500"> Meals: <input id="dM" type="number" value="4000"> Transit: <input id="dT" type="number" value="1200"> Flight per person (USD): <input id="fPP" type="number" value="2082"> <button class="btn" id="recalc">Recalculate</button></p>
+<h3>Spending tracker</h3><form id="expForm"><input name="label" required placeholder="What did you spend on?"><input name="amount_yen" required type="number" min="0" placeholder="¥ amount"><button class="btn">Add expense</button></form><div id="expList"></div>
+</section>
+
+<section id="bookings"><h2>Booking deadlines</h2><div id="reminders"></div></section>
+
+<section id="prep"><h2>Prep</h2>
+<div class="day"><h3>🌸 Sakura forecast watch</h3><p>Status (checked Nov 4, 2026): No genuine 2027 forecast is available yet. Dates currently circulating are JMA 1991–2020 averages / historical estimates. First real forecasts are expected mid-December 2026 to late January 2027.</p></div>
+<div class="day"><h3>🎒 Packing &amp; daily carry checklists</h3><div id="checks"></div><button class="btn" id="resetChecks">Reset daily carry</button></div>
+</section>
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+// ==== PASTE YOUR FIREBASE CONFIG HERE (Firebase Console → Project settings → Your apps) ====
+const FIREBASE_CONFIG = null; // e.g. {apiKey:"...",authDomain:"...",projectId:"...",storageBucket:"...",messagingSenderId:"...",appId:"..."}
+</script>
+<script>
+const RATE=158.27, USD=v=>'$'+Math.round(v).toLocaleString(), YEN=v=>'¥'+Number(v).toLocaleString();
+const SHAPE={Sight:'▲',Food:'■',Shopping:'◆',History:'★',Experience:'●',Transport:'➤'};
+let ideas=[
+{id:19,title:"MAIKOYA Kyoto — Kimono Tea Ceremony",city:"Kyoto",category:"Experience",trip_date:"2027-03-25",priority:"nice-to-have",estimated_cost_yen:0,cost_note:"Check the current price when booking.",notes:"Kimono + tea ceremony in a historic machiya townhouse. Named Japan's best luxury tea ceremony experience for 2026. Cherry blossom season books out fast, so reserving early is recommended.",website_url:"https://mai-ko.com",place_label:"MAIKOYA Kyoto Karasuma Shijo, 220 Itoyacho, Shimogyo Ward, Kyoto",latitude:35.001462,longitude:135.757594,image_url:""},
+{id:17,title:"Shinsengumi Memorial Museum",city:"Kyoto",category:"History",trip_date:"",priority:"nice-to-have",estimated_cost_yen:0,cost_note:"",notes:"Shinsengumi memorial museum in Shimogyo-ku, Kyoto. Pairs well with Yagi House in Mibu. Exhibits are Japanese-only; bring a translation app.",website_url:"https://kyoto-hatoya.jp/shinsengumi/",place_label:"Minamifudodocho, Shimogyo Ward, Kyoto, 600-8234, Japan",latitude:34.986873,longitude:135.755185,image_url:""},
+{id:18,title:"Shinsengumi Furusato History Museum",city:"Tokyo",category:"History",trip_date:"",priority:"nice-to-have",estimated_cost_yen:0,cost_note:"",notes:"Hino City's Shinsengumi museum, 4-16-1 Shinmei, Hino. Open 9:30-17:00, closed Mondays. Nearby Hijikata Toshizo Museum is only open 1st & 3rd Sundays 12:00-16:00 — Mar 21, 2027 is the 3rd Sunday, so both are doable the same day. Exhibits are Japanese-only; bring a translation app.",website_url:"https://www.city.hino.lg.jp/shinsenr",place_label:"4-16-1 Shinmei, Hino-shi, Tokyo 191-0016",latitude:35.673516,longitude:139.396509,image_url:""},
+{id:15,title:"DAWN Avatar Robot Cafe",city:"Tokyo",category:"Food",trip_date:"2027-03-20",priority:"must-do",estimated_cost_yen:5500,cost_note:"OriHime Diner adult package including meal and drink",notes:"Cafe where the servers are robots piloted remotely by staff who can't easily leave home — you can chat with the remote staff. Order at the entrance; robot-served tables cost a surcharge. Pairs with an Akihabara anime walk.",website_url:"https://dawn2021.orylab.com/",place_label:"Nihonbashi, Chuo City, Tokyo",latitude:null,longitude:null,image_url:""},
+{id:16,title:"Kaiyukan Aquarium",city:"Osaka",category:"Sight",trip_date:"2027-03-28",priority:"must-do",estimated_cost_yen:3500,cost_note:"Adult admission; date-based price up to ¥3,500",notes:"One of the largest aquariums in the world — famous for its whale shark and massive central tank. In the Tempozan area of Osaka Bay.",website_url:"https://www.kaiyukan.com/",place_label:"Tempozan, Osaka Bay",latitude:null,longitude:null,image_url:""},
+{id:14,title:"Don Quijote",city:"Tokyo",category:"Shopping",trip_date:"2027-03-19",priority:"nice-to-have",estimated_cost_yen:0,cost_note:"Free entry · shopping spend not included",notes:"Famous discount chain — souvenirs, snacks, and Blue Lock anime apparel collabs (jerseys, hoodies). The Mega Don Quijote in Shibuya is open late and a classic stop.",website_url:"",place_label:"MEGA Don Quijote Shibuya Honten, 28-6 Udagawacho, Shibuya-ku, Tokyo",latitude:35.660329,longitude:139.697749,image_url:""},
+{id:13,title:"Kappabashi Kitchenware Street",city:"Tokyo",category:"Shopping",trip_date:"2027-03-20",priority:"nice-to-have",estimated_cost_yen:0,cost_note:"Free street access · purchases not included",notes:"Tokyo's kitchenware street — Japanese kitchen knives, ceramics, and the famous plastic food replicas. Great for souvenirs. Near Asakusa, easy to pair with Senso-ji.",website_url:"",place_label:"Kappabashi, Tokyo",latitude:null,longitude:null,image_url:""},
+{id:2,title:"Tokyo Konbini Walk (guided tour)",city:"Tokyo",category:"Food",trip_date:"2027-03-21",priority:"must-do",estimated_cost_yen:8300,cost_note:"Approximate yen conversion from US$55.46",notes:"Guided konbini walking tour by byFood — 90 min, max 6 people, English guide. Multiple konbini + vending machine, food hacks and culture, then sample everything together. Meets near Yoyogi or Yurakucho Station. Free cancellation up to 24h ahead.",website_url:"https://www.byfood.com/experiences/convenience-store-tour-1388",place_label:"Tokyo",latitude:null,longitude:null,image_url:""},
+{id:3,title:"Arashiyama Bamboo, Matcha, Monkeys & Temple Tour",city:"Kyoto",category:"Sight",trip_date:"2027-03-24",priority:"nice-to-have",estimated_cost_yen:6000,cost_note:"Planning estimate · operator not confirmed",notes:"Guided Arashiyama tour: bamboo grove, matcha, monkeys and temple in one outing. Listed among Kyoto's best walking tours.",website_url:"",place_label:"Arashiyama, Kyoto",latitude:null,longitude:null,image_url:""},
+{id:4,title:"Gion Night Walking Tour",city:"Kyoto",category:"Sight",trip_date:"2027-03-25",priority:"nice-to-have",estimated_cost_yen:4500,cost_note:"Planning estimate · operator not chosen",notes:"Guided night walk through the geisha district after dark — geisha trivia and hidden lanes. Good fit for the Gion evening.",website_url:"",place_label:"Gion, Kyoto",latitude:null,longitude:null,image_url:""},
+{id:5,title:"Nara Park",city:"Nara",category:"Sight",trip_date:"2027-03-27",priority:"must-do",estimated_cost_yen:0,cost_note:"Park entry free · temple tickets and deer crackers extra",notes:"Famous for the free-roaming deer you can feed rice crackers, plus Todai-ji Temple with the Great Buddha. Easy half-day trip.",website_url:"",place_label:"Nara Park, Nara",latitude:null,longitude:null,image_url:""},
+{id:6,title:"Kyoto International Manga Museum",city:"Kyoto",category:"Sight",trip_date:"2027-03-25",priority:"must-do",estimated_cost_yen:1200,cost_note:"Adult admission",notes:"Huge manga library inside a former elementary school — relaxed stop, fun for manga/anime fans.",website_url:"",place_label:"Kyoto",latitude:null,longitude:null,image_url:""},
+{id:7,title:"Nintendo Store Tokyo + Pokémon Center Shibuya",city:"Tokyo",category:"Shopping",trip_date:"2027-03-19",priority:"must-do",estimated_cost_yen:0,cost_note:"Free entry · shopping spend not included",notes:"Both in Shibuya Parco — Nintendo's official Tokyo store plus a Pokémon Center in one stop.",website_url:"https://en.shibuya.parco.jp/floor/detail/?f=6f",place_label:"Shibuya Parco, Tokyo",latitude:null,longitude:null,image_url:""},
+{id:8,title:"Toei Kyoto Studio Park",city:"Kyoto",category:"Sight",trip_date:"2027-03-24",priority:"must-do",estimated_cost_yen:2800,cost_note:"Uzumasa Kyoto Village 1-day admission; attractions extra",notes:"Samurai-era theme park (Toei Uzumasa Eigamura) near Arashiyama — pairs well with the bamboo grove day.",website_url:"https://global.toei-eigamura.com/",place_label:"Uzumasa, Kyoto",latitude:null,longitude:null,image_url:""},
+{id:9,title:"Pokémon Center Mega Tokyo",city:"Tokyo",category:"Shopping",trip_date:"2027-03-20",priority:"must-do",estimated_cost_yen:0,cost_note:"Free entry · shopping spend not included",notes:"The biggest Pokémon Center, in Ikebukuro's Sunshine City.",website_url:"",place_label:"Sunshine City, Ikebukuro, Tokyo",latitude:null,longitude:null,image_url:""},
+{id:10,title:"Ride the Shinkansen (bullet train)",city:"Tokyo",category:"Transport",trip_date:"2027-03-23",priority:"must-do",estimated_cost_yen:13800,cost_note:"Hikari/Kodama reserved seat, Tokyo–Kyoto reference fare",notes:"Tokaido Shinkansen from the Tokyo area to Kyoto. Tips: reserve a right-side window seat heading west for Mt. Fuji views, and grab an ekiben (station bento) before boarding.",website_url:"",place_label:"Tokyo → Kyoto",latitude:null,longitude:null,image_url:""},
+{id:11,title:"JACKROAD watch store",city:"Tokyo",category:"Shopping",trip_date:"2027-03-21",priority:"nice-to-have",estimated_cost_yen:0,cost_note:"Free entry · shopping spend not included",notes:"Legendary watch shop on the 3rd floor of Nakano Broadway — 6,000+ watches in stock (Rolex, Omega, Seiko, Grand Seiko, vintage). English-speaking staff, tax-free. Same building as Mandarake, so anime + watches in one stop.",website_url:"",place_label:"Nakano Broadway, Tokyo",latitude:null,longitude:null,image_url:""},
+{id:12,title:"Chureito Pagoda",city:"Kawaguchiko",category:"Sight",trip_date:"2027-03-22",priority:"must-do",estimated_cost_yen:0,cost_note:"Free entry · parking extra",notes:"The iconic shot: five-story pagoda + cherry blossoms + Mt. Fuji in one frame. ~400 steps up — go early morning for fewer crowds and clearest Fuji views. Bloom here runs ~a week behind Tokyo.",website_url:"",place_label:"Arakurayama Sengen Park, Fujiyoshida",latitude:null,longitude:null,image_url:""}
+];
+const lodging=[
+{stop:"Tokyo",dates:"Mar 19–23",nights:4,setup:"Two rooms",per:35000,low:20000,high:55000,note:"Two standard rooms give the widest choice near stations. Family/quad rooms are limited and sell early."},
+{stop:"Kawaguchiko",dates:"Mar 23–24",nights:1,setup:"Family room",per:35000,low:15000,high:70000,note:"A Japanese-style family room can sleep four on futons. Ryokan dinner and breakfast can push the total higher."},
+{stop:"Kyoto",dates:"Mar 24–26",nights:2,setup:"Two rooms",per:45000,low:28000,high:80000,note:"Peak blossom demand is strongest here. Two rooms are the dependable default; apartment-style family rooms go first."},
+{stop:"Nara / Osaka area",dates:"Mar 26–27",nights:1,setup:"Two rooms",per:32000,low:15000,high:50000,note:"Keep two rooms as the planning baseline; compare Nara with Osaka-area stays once the day's finish point is fixed."},
+{stop:"Osaka",dates:"Mar 27–28",nights:1,setup:"Two rooms",per:30000,low:18000,high:45000,note:"Two business-hotel rooms are the flexible baseline for four; confirm easy access to KIX for departure day."}];
+const reminders=[
+["2026-10-16","Book Kawaguchiko lodging","Smallest family-room and ryokan inventory. Target the Mar 23 overnight stay."],
+["2026-10-23","Book Tokyo lodging","Secure four nights, Mar 19–23. Compare two rooms with family/quad inventory near a station."],
+["2026-11-01","Book Kyoto lodging","Highest-demand stop: reserve two nights, Mar 24–26, before blossom-season inventory tightens."],
+["2026-11-15","Book Nara / Osaka-area lodging","Reserve the Mar 26 overnight once the Nara-to-Osaka finish point is decided."],
+["2026-11-26","Buy RDU → Tokyo flights","Cheapest booking window is usually now through Nov 26 for Mar 19–28."],
+["2026-11-30","Book Osaka lodging","Reserve Mar 27 near convenient KIX transportation for departure day."],
+["2026-12-01","Nintendo Museum lottery","Apply Dec 1–31, 2026. Results Jan 1; payment due about one week later."],
+["2027-01-15","Kawaguchiko → Kyoto night bus","Sales open about two months ahead. Choose the Mar 23 overnight departure."],
+["2027-02-05","Tokyo Konbini Walk","Suggested booking target for peak-season dates."],
+["2027-02-20","Arashiyama guided tour","Operator is not confirmed. Pick one, then verify cancellation and meeting-point policy."],
+["2027-02-25","Gion night tour","Operator is not confirmed. Book 2–4 weeks ahead for late-March demand."],
+["2027-02-26","Kaiyukan timed entry","E-tickets are released 30 days ahead; choose a Mar 28 entry slot."],
+["2027-03-05","SHIBUYA SKY sunset ticket","Sales open 14 days ahead at 00:00 JST. Mar 19 slots open Mar 5."]];
+const checkItems=["Passport / ID","Phone + charger","IC card / transit app ready","Cash (yen) + card","Comfortable walking shoes","Light jacket for cool mornings","Umbrella / rain layer","Portable battery","Translation app downloaded","Camera / phone storage cleared","Medications","Hotel address saved offline","Train app / maps downloaded","Snacks / konbini stop planned","Day bag packed","Tickets / reservations screenshotted","Laundry / outfit for tomorrow"];
+
+const store={get(k,d){try{const v=localStorage.getItem('jtp-'+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem('jtp-'+k,JSON.stringify(v))}catch(e){}}};
+ideas=store.get('ideas',ideas); let expenses=store.get('expenses',[]); let doneR=store.get('reminders',{}); let doneC=store.get('checks',{});
+let tripDoc=null;
+function save(){store.set('ideas',ideas);store.set('expenses',expenses);store.set('reminders',doneR);store.set('checks',doneC);
+ if(tripDoc)tripDoc.set({ideas,expenses,reminders:doneR,checks:doneC,updated:Date.now()}).catch(e=>setSync('⚠️ Save failed: '+e.message))}
+function setSync(t){const el=document.getElementById('sync');if(el)el.textContent=t}
+function startSync(){
+ if(!FIREBASE_CONFIG||!window.firebase){setSync('💾 Saved on this device only');return}
+ try{firebase.initializeApp(FIREBASE_CONFIG);tripDoc=firebase.firestore().collection('trips').doc('japan-2027');
+  let first=true;
+  tripDoc.onSnapshot(snap=>{
+   if(!snap.exists){if(first){first=false;save()}return}
+   first=false;const d=snap.data();ideas=d.ideas||[];expenses=d.expenses||[];doneR=d.reminders||{};doneC=d.checks||{};
+   filters();render();setSync('🟢 Shared — everyone sees the same plan');
+  },e=>setSync('⚠️ Sync error: '+e.message));
+ }catch(e){setSync('⚠️ Sync error: '+e.message)}
+}
+const $=id=>document.getElementById(id);const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('main section').forEach(s=>s.classList.remove('active'));$(b.dataset.tab).classList.add('active');if(b.dataset.tab==='map')setTimeout(initMap,100)});
+function filters(){['fCity','fCat'].forEach((id,ix)=>{const sel=$(id),cur=sel.value;sel.length=1;const vals=[...new Set(ideas.map(i=>ix?i.category:i.city))].sort();vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o)});sel.value=cur})}
+function render(){
+ const q=$('q').value.toLowerCase(),fc=$('fCity').value,fk=$('fCat').value,fp=$('fPri').value;
+ const list=ideas.filter(i=>(!q||(i.title+i.notes+i.city).toLowerCase().includes(q))&&(!fc||i.city===fc)&&(!fk||i.category===fk)&&(!fp||i.priority===fp)).sort((a,b)=>(a.trip_date||'9999').localeCompare(b.trip_date||'9999'));
+ $('stCount').textContent=ideas.length; $('stMust').textContent=ideas.filter(i=>i.priority==='must-do').length;
+ const cost=ideas.reduce((s,i)=>s+Number(i.estimated_cost_yen||0),0); $('stCost').textContent=YEN(cost)+' ('+USD(cost/RATE)+')';
+ $('cards').innerHTML=list.map(i=>`<div class="card">${i.image_url?`<img src="${i.image_url}" alt="">`:`<div class="noimg">${SHAPE[i.category]||'●'} ${i.category.toUpperCase()}</div>`}<div class="body">
+ <span class="badge ${i.priority==='must-do'?'must':'nice'}">${i.priority==='must-do'?'★ MUST-DO':'NICE-TO-HAVE'}</span><span class="badge cat">${SHAPE[i.category]||''} ${i.category}</span>
+ <h3 style="margin:4px 0">${esc(i.title)}</h3><p class="small">${i.city}${i.trip_date?' · '+i.trip_date:''}<br>${i.place_label||''}</p>
+ <p><strong>${YEN(i.estimated_cost_yen||0)}</strong> <span class="small">≈ ${USD((i.estimated_cost_yen||0)/RATE)} · ${i.cost_note||''}</span></p><p>${esc(i.notes)}</p>
+ <p>${i.website_url?`<a href="${i.website_url}" target="_blank" rel="noopener">Official website</a> · `:''}<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(i.place_label||i.title+' '+i.city)}" target="_blank" rel="noopener">Directions</a> · <a href="#" onclick="delIdea(${i.id});return false">Delete</a></p></div></div>`).join('')||'<p>No places match those filters.</p>';
+ // itinerary
+ const by={}; ideas.slice().sort((a,b)=>(a.trip_date||'9999').localeCompare(b.trip_date||'9999')).forEach(i=>{const d=i.trip_date||'No date set';(by[d]=by[d]||[]).push(i)});
+ $('days').innerHTML=Object.entries(by).map(([d,arr])=>`<div class="day"><h3>${d}</h3>${arr.map(i=>`<p>${SHAPE[i.category]||'●'} <strong>${i.title}</strong> — ${i.city} · ${YEN(i.estimated_cost_yen||0)}${i.priority==='must-do'?' · ★ Must-do':''}</p>`).join('')}</div>`).join('');
+ // map list
+ $('mapList').innerHTML='<h3>All mapped / listed places</h3>'+ideas.map(i=>`<p>${SHAPE[i.category]||'●'} <strong>${i.title}</strong> — ${i.place_label||i.city}</p>`).join('');
+ renderBudget(); renderReminders(); renderChecks(); renderExpenses();
+}
+window.delIdea=id=>{if(confirm('Delete this idea?')){ideas=ideas.filter(i=>i.id!==id);save();render()}};
+function renderBudget(){
+ const lod=lodging.reduce((s,l)=>s+l.per*l.nights,0);
+ $('lodgingTable').innerHTML='<table><tr><th>Stop</th><th>Dates</th><th>Nights</th><th>Setup</th><th>/ night</th><th>Range</th><th>Subtotal</th><th>Note</th></tr>'+lodging.map(l=>`<tr><td>${l.stop}</td><td>${l.dates}</td><td>${l.nights}</td><td>${l.setup}</td><td>${YEN(l.per)}</td><td>${YEN(l.low)}–${YEN(l.high)}</td><td>${YEN(l.per*l.nights)}</td><td>${l.note}</td></tr>`).join('')+`<tr><th colspan="6">Total</th><th>${YEN(lod)}</th><th>≈ ${USD(lod/RATE)}</th></tr></table>`;
+ const daily=(Number($('dB').value)+Number($('dM').value)+Number($('dT').value))*4*10, flights=Number($('fPP').value)*4, ideascost=ideas.reduce((s,i)=>s+Number(i.estimated_cost_yen||0),0)*4;
+ $('bLodging').textContent=YEN(lod); $('bDaily').textContent=YEN(daily); $('bFlights').textContent=USD(flights); $('bIdeas').textContent=YEN(ideascost);
+}
+function renderReminders(){$('reminders').innerHTML=reminders.map((r,ix)=>`<label class="chk"><input type="checkbox" ${doneR[ix]?'checked':''} onchange="doneR[${ix}]=this.checked;save()"> <strong>${r[0]}</strong> — ${r[1]}<br><span class="small">${r[2]}</span></label>`).join('')}
+function renderChecks(){$('checks').innerHTML=checkItems.map((c,ix)=>`<label class="chk"><input type="checkbox" ${doneC[ix]?'checked':''} onchange="doneC[${ix}]=this.checked;save()"> ${c}</label>`).join('')}
+function renderExpenses(){$('expList').innerHTML=expenses.length?('<table><tr><th>Item</th><th>¥</th><th>$</th></tr>'+expenses.map(e=>`<tr><td>${esc(e.label)}</td><td>${YEN(e.amount_yen)}</td><td>${USD(e.amount_yen/RATE)}</td></tr>`).join('')+`<tr><th>Total</th><th>${YEN(expenses.reduce((s,e)=>s+Number(e.amount_yen),0))}</th><th>${USD(expenses.reduce((s,e)=>s+Number(e.amount_yen),0)/RATE)}</th></tr></table>`):'<p class="small">No expenses recorded yet.</p>'}
+let mapDone=false; function initMap(){if(mapDone||!window.L)return; mapDone=true; const m=L.map('map').setView([36.2,138.25],6); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(m);
+ ideas.filter(i=>i.latitude&&i.longitude).forEach(i=>{const ic=L.divIcon({className:'',html:`<div class="pin">${SHAPE[i.category]||'●'}</div>`,iconSize:[30,30]}); L.marker([i.latitude,i.longitude],{icon:ic}).addTo(m).bindPopup(`<strong>${i.title}</strong><br>${i.city} · ${i.category}<br>${i.notes}`)});
+ // Shinkansen route (schematic line Tokyo → Kyoto, as in the planner)
+ L.polyline([[35.68,139.69],[35.44,136.88],[34.99,135.76]],{color:'#2563eb',weight:3,dashArray:'6 6'}).addTo(m).bindPopup('Tokaido Shinkansen: Tokyo → Kyoto');
+}
+['q','fCity','fCat','fPri'].forEach(id=>$(id).addEventListener('input',render));
+$('addForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target);ideas.push({id:Date.now(),title:f.get('title'),city:f.get('city'),category:f.get('category')||'Sight',trip_date:f.get('trip_date'),priority:f.get('priority'),estimated_cost_yen:Number(f.get('estimated_cost_yen')||0),cost_note:'',notes:f.get('notes')||'',website_url:'',place_label:f.get('city'),latitude:null,longitude:null,image_url:''});save();e.target.reset();render()};
+$('expForm').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target);expenses.push({label:f.get('label'),amount_yen:Number(f.get('amount_yen'))});save();e.target.reset();renderExpenses()};
+$('yenIn').addEventListener('input',e=>{$('usdOut').textContent=USD(Number(e.target.value||0)/RATE)});
+$('recalc').onclick=renderBudget; $('resetChecks').onclick=()=>{doneC={};save();renderChecks()};
+filters(); render(); startSync();
+</script></body></html>
