@@ -232,7 +232,7 @@ function startSync(){
   try{db.enablePersistence({synchronizeTabs:true}).catch(()=>{})}catch(e){} // keeps the plan available offline
   tripDoc=db.collection('trips').doc('japan-2027');startJournal(db);
   let first=true;
-  tripDoc.onSnapshot(snap=>{
+  tripDoc.onSnapshot({includeMetadataChanges:true},snap=>{
    if(!snap.exists){if(snap.metadata.fromCache){setSync('📴 Offline — showing the copy saved on this phone');return}if(first){first=false;save()}return}
    first=false;const d=snap.data();ideas=withQ(d.ideas||[]);expenses=d.expenses||[];doneR=d.reminders||{};doneC=d.checks||{};
    travelers=d.travelers||[];votes=d.votes||{};hotels=d.hotels||SEED_HOTELS;legs=d.legs||SEED_LEGS;backups=d.backups||{};tasks=d.tasks||SEED_TASKS;contacts=d.contacts||[];flights=d.flights||SEED_FLIGHTS;sakura=d.sakura||{};souvenirs=d.souvenirs||[];
