@@ -75,15 +75,8 @@ function openForm(title,fields,obj,onSave,onDelete){
 
 // ---- who am I (for votes, tasks, journal) ----
 function setMe(n){me=n;try{localStorage.setItem('jtp-me',n)}catch(e){}if(n&&!travelers.includes(n)){travelers.push(n);save()}renderMeBtn();render()}
-function pickMe(after){
- modal(`<h3 style="margin-top:0">Who are you?</h3><p class="small">So votes, tasks and journal entries show your name. This is remembered on this phone.</p>
- <div style="display:flex;gap:8px;flex-wrap:wrap">${travelers.map(t=>`<button class="btn" type="button" data-n="${esc(t)}">${esc(t)}</button>`).join('')}</div>
- <form id="meForm" style="margin-top:12px"><input name="n" placeholder="${travelers.length?'Or type a new name':'Your first name'}" required><button class="btn primary">OK</button></form>`);
- $('modal').querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>{closeModal();setMe(b.dataset.n);after&&after()});
- $('meForm').onsubmit=e=>{e.preventDefault();const n=new FormData(e.target).get('n').trim();if(n){closeModal();setMe(n);after&&after()}};
-}
-
-function renderMeBtn(){const b=$('meBtn');if(b)b.textContent='👤 '+(me||'Who are you?')}
+function pickMe(after){showIntro(after)}
+function renderMeBtn(){const b=$('meBtn');if(b)b.textContent=me?'👤 '+me+' · switch':'👤 Choose your name'}
 
 // ---- votes ----
 window.vote=id=>{if(!me)return pickMe(()=>window.vote(id));const l=voteNames(id);votes[id]=l.includes(me)?l.filter(x=>x!==me):[...l,me];save();render()};
@@ -349,12 +342,14 @@ let dayView='one';
 function setDayView(v){dayView=v;document.querySelectorAll('#today .seg button').forEach(b=>b.classList.toggle('on',b.dataset.dv===v));$('todayBox').style.display=v==='one'?'':'none';$('days').style.display=v==='all'?'':'none'}
 
 // ---- intro ----
-window.showIntro=()=>{const el=$('intro');el.style.backgroundImage=`url("${heroURL()}")`;const c=$('introCredit');c.textContent=HERO.credit;c.href=HERO.page;
- $('introNames').innerHTML=travelers.map(n=>`<button type="button" class="${n===me?'sel':''}" data-n="${esc(n)}" style="${n===me?'background:#fff;color:#13294b':''}">${esc(n)}</button>`).join('');
- $('introNames').querySelectorAll('button').forEach(b=>b.onclick=()=>{setMe(b.dataset.n);showIntro()});
- $('introForm').style.display=me&&travelers.includes(me)?'none':'flex';
+let introAfter=null;
+window.showIntro=after=>{introAfter=typeof after==='function'?after:null;const el=$('intro');el.style.backgroundImage=`url("${heroURL()}")`;const c=$('introCredit');c.textContent=HERO.credit;c.href=HERO.page;
+ $('introWho').innerHTML=me?`Hi ${esc(me)} 👋 <span style="font-weight:400;opacity:.85">— not you? Pick your name:</span>`:`Who's using this phone?`;
+ $('introNames').innerHTML=travelers.map(n=>`<button type="button" data-n="${esc(n)}" style="${n===me?'background:#fff;color:#13294b':''}">${n===me?'✓ ':''}${esc(n)}</button>`).join('');
+ $('introNames').querySelectorAll('button').forEach(b=>b.onclick=()=>{setMe(b.dataset.n);hideIntro()});
+ $('introForm').querySelector('input').placeholder=travelers.length?'Not listed? Type your name':'Type your first name';
  el.classList.add('on')};
-function hideIntro(){$('intro').classList.remove('on');try{localStorage.setItem('jtp-intro','1')}catch(e){}}
+function hideIntro(){$('intro').classList.remove('on');try{localStorage.setItem('jtp-intro','1')}catch(e){}const f=introAfter;introAfter=null;if(f&&me)f()}
 
 // ---- home ----
 function nextDeadlines(){const t=todayISO();return reminders.map((r,ix)=>({r,ix})).filter(x=>!doneR[x.ix]&&x.r[0]>=t).sort((a,b)=>(a.r[3]||a.r[0]).localeCompare(b.r[3]||b.r[0]))}
@@ -383,6 +378,6 @@ function initNav(){if(navReady)return;navReady=true;
  document.querySelectorAll('#tabbar button').forEach(b=>b.onclick=()=>go(b.dataset.go));
  $('backBtn').onclick=()=>go(PAGES[curPage].back||'home');
  document.querySelectorAll('#today .seg button').forEach(b=>b.onclick=()=>setDayView(b.dataset.dv));
- $('introGo').onclick=hideIntro;$('introForm').onsubmit=e=>{e.preventDefault();const n=new FormData(e.target).get('n').trim();if(n){setMe(n);showIntro()}};
+ $('introGo').onclick=hideIntro;$('introForm').onsubmit=e=>{e.preventDefault();const n=new FormData(e.target).get('n').trim();if(n){e.target.reset();setMe(n);hideIntro()}};
  go(location.hash.slice(1)||'home',true);
- let seen='';try{seen=localStorage.getItem('jtp-intro')}catch(e){}if(!seen)showIntro();}
+ let seen='';try{seen=localStorage.getItem('jtp-intro')}catch(e){}if(!seen&&!me)showIntro();}

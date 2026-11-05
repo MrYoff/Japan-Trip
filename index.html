@@ -89,7 +89,7 @@ label.fl{display:block;font-size:.9em;color:var(--mut);margin:6px 0}label.fl inp
  <h1>Our Japan Trip</h1>
  <p>Cherry blossoms, Mount Fuji, and ten days together.</p>
  <p class="route">Tokyo → Kawaguchiko → Kyoto → Nara → Osaka</p>
- <p style="font-weight:700;margin-top:6px">Who's this?</p>
+ <p style="font-weight:700;margin-top:6px" id="introWho">Who's using this phone?</p><p style="font-size:13px;opacity:.8;margin:0">No account or password — your name just goes on your votes, tasks and journal entries.</p>
  <div class="names" id="introNames"></div>
  <form id="introForm" style="display:flex;gap:6px;margin-bottom:14px"><input name="n" placeholder="Type your name" style="flex:1;margin:0"><button class="go" style="width:auto;padding:10px 18px">OK</button></form>
  <button class="go" id="introGo">Let's go →</button>
@@ -106,7 +106,7 @@ label.fl{display:block;font-size:.9em;color:var(--mut);margin:6px 0}label.fl inp
  <div id="installTip" class="panel" style="padding:12px 16px"><strong>📲 Add to your home screen</strong><br><span id="installHow" class="small"></span> <a href="#" class="small" onclick="this.parentNode.style.display='none';try{localStorage.setItem('jtp-hideTip','1')}catch(e){};return false">Got it</a></div>
  <div id="homeNow"></div>
  <div class="tiles" id="tiles"></div>
- <div class="foot"><button class="btn" id="meBtn" type="button" onclick="pickMe()">👤</button><button class="btn" id="themeBtn" type="button">🌙 Dark</button><button class="btn" type="button" onclick="showIntro()">🌸 Intro</button><p class="small" id="sync">…</p></div>
+ <div class="foot"><button class="btn" id="meBtn" type="button" onclick="pickMe()">👤</button><button class="btn" id="themeBtn" type="button">🌙 Dark</button><button class="btn" type="button" onclick="showIntro()" style="display:none">🌸 Intro</button><p class="small" id="sync">…</p></div>
 </section>
 
 <!-- DAYS -->
