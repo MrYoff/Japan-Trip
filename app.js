@@ -41,7 +41,7 @@ const SEED_TASKS=[
  'Download Google Translate Japanese (offline) + offline Google Maps',
  'Book Fuji Excursion seats (on sale Feb 23)',
  'Decide on luggage forwarding / big-suitcase seats on the Shinkansen',
- 'Fill in hotel names + Japanese addresses (Hotels & SOS tab)',
+ 'Fill in hotel names + Japanese addresses (Plan → Hotels)',
  'Add this planner to everyone\'s home screen'
 ].map((t,i)=>({id:'t'+(i+1),text:t,who:'',done:false}));
 const JR_PASS_OFFICIAL=50000, JR_PASS_AGENT=53000;
@@ -110,13 +110,13 @@ function renderToday(){const box=$('todayBox');if(!box)return;const t=todayISO()
  let top='';if(t<TRIP_START&&!viewDay)top=`<p class="small">The trip hasn't started yet, so this is a preview of Day 1. During the trip this page opens on the current day automatically.</p>`;
  box.innerHTML=`<div class="chips">${TRIP_DATES.map(x=>`<button class="chip ${x===d?'on':''}" onclick="setViewDay('${x}')">${dayNum(x)}<small>${fmtDay(x).replace(',','<br>')}</small></button>`).join('')}</div>${top}
  <h2 style="margin:10px 0 2px">Day ${n} · ${fmtDay(d)}</h2><p style="margin:2px 0">${wxLine(d)}</p>${sakuraLine(d)?`<p style="margin:2px 0">${sakuraLine(d)}</p>`:''}${HOLIDAYS[d]?`<p class="small">${HOLIDAYS[d]}</p>`:''}
- ${flightsOn(d).length?`<div class="day"><h3>✈️ Flights today</h3>${flightsOn(d).map(f=>flightCard(f,false)).join('')}</div>`:(d===TRIP_START||d===TRIP_END)&&!flights.some(f=>f.number)?`<div class="day"><h3>✈️ Flights</h3><p class="small">No flight details yet — <a href="#" onclick="goTab('travel');return false">add them on Getting Around</a>.</p></div>`:''}
+ ${flightsOn(d).length?`<div class="day"><h3>✈️ Flights today</h3>${flightsOn(d).map(f=>flightCard(f,false)).join('')}</div>`:(d===TRIP_START||d===TRIP_END)&&!flights.some(f=>f.number)?`<div class="day"><h3>✈️ Flights</h3><p class="small">No flight details yet — <a href="#" onclick="goTab('travel');return false">add them under Plan → Flights &amp; trains</a>.</p></div>`:''}
  <div class="day"><h3>🏨 ${d===TRIP_END?'Flying home today':'Tonight\'s hotel'}</h3>${d===TRIP_END?'<p>Check out, then head to the airport — trains are below.</p>':h?hotelBlock(h,true):'<p class="small">No hotel set for this night.</p>'}</div>
  <div class="day"><h3>🚆 Trains today</h3>${dayLegs.length?dayLegs.map(legCard).join(''):'<p class="small">No train legs today — just local subway/bus with your IC card.</p>'}</div>
- <div class="day"><h3>🗺️ The plan</h3>${dayIdeas.length?dayIdeas.map(i=>`<div class="leg"><strong>${SHAPE[i.category]||'●'} ${esc(i.title)}</strong>${i.priority==='must-do'?' <span class="badge must">★</span>':''}<br><span class="small">${esc(i.city)}${i.hours?' · 🕘 '+esc(i.hours):''}${i.estimated_cost_yen?' · '+YEN(i.estimated_cost_yen)+'/person':''}</span>${closedWarn(i,d)}<br><a href="${mapsHref(i.place_label||i.title+' '+i.city)}" target="_blank" rel="noopener">Directions</a>${i.website_url?` · <a href="${esc(i.website_url)}" target="_blank" rel="noopener">Website</a>`:''}</div>`).join(''):'<p class="small">Nothing planned yet — add ideas with this date on the Ideas tab.</p>'}</div>
- <div class="day"><h3>☔ Rainy-day backup</h3><p>${backups[d]?esc(backups[d]).replace(/\n/g,'<br>'):'<span class="small">None set — add one on the Itinerary tab.</span>'}</p></div>
- <div class="sosrow"><a class="btn danger" href="tel:110">🚓 110 Police</a><a class="btn danger" href="tel:119">🚑 119 Ambulance</a><a class="btn" href="#" onclick="goTab('sos');return false">🆘 More help</a></div>${tzCard(d)}`;wireTZ(d);}
-window.goTab=id=>{const b=document.querySelector(`nav button[data-tab="${id}"]`);if(b)b.click()};
+ <div class="day"><h3>🗺️ The plan</h3>${dayIdeas.length?dayIdeas.map(i=>`<div class="leg"><strong>${SHAPE[i.category]||'●'} ${esc(i.title)}</strong>${i.priority==='must-do'?' <span class="badge must">★</span>':''}<br><span class="small">${esc(i.city)}${i.hours?' · 🕘 '+esc(i.hours):''}${i.estimated_cost_yen?' · '+YEN(i.estimated_cost_yen)+'/person':''}</span>${closedWarn(i,d)}<br><a href="${mapsHref(i.place_label||i.title+' '+i.city)}" target="_blank" rel="noopener">Directions</a>${i.website_url?` · <a href="${esc(i.website_url)}" target="_blank" rel="noopener">Website</a>`:''}</div>`).join(''):'<p class="small">Nothing planned yet — add places with this date under Places.</p>'}</div>
+ <div class="day"><h3>☔ Rainy-day backup</h3><p>${backups[d]?esc(backups[d]).replace(/\n/g,'<br>'):'<span class="small">None yet — add one under “All 10 days”.</span>'}</p></div>
+ `;}
+window.goTab=id=>go(id);
 
 // ---- ITINERARY (day by day + backups) ----
 function renderItinerary(){const box=$('days');if(!box)return;
@@ -158,7 +158,7 @@ function hotelBlock(h,compact){
  <div class="sosrow"><button class="btn primary" type="button" onclick="showDriver('${h.id}')">🚕 Show to driver</button>${(h.address_ja||h.address||h.name)?`<a class="btn" href="${mapsHref(h.address_ja||h.address||h.name)}" target="_blank" rel="noopener">Directions</a>`:''}${h.phone?`<a class="btn" href="${telHref(h.phone)}">📞 Call</a>`:''}${compact?'':`<button class="btn" type="button" onclick="editHotel('${h.id}')">Edit</button>`}</div>
  ${compact?'':(h.hospital?`<p class="small">🏥 Nearest hospital: <strong>${esc(h.hospital)}</strong>${h.hospital_address?' — '+esc(h.hospital_address):''}${h.hospital_phone?` · <a href="${telHref(h.hospital_phone)}">${esc(h.hospital_phone)}</a>`:''}</p>`:'<p class="small">🏥 Nearest hospital: not filled in yet.</p>')}`}
 window.showDriver=id=>{const h=hotels.find(x=>x.id===id);if(!h)return;
- if(!h.address_ja&&!h.name_ja&&!h.address){alert('Fill in this hotel\'s Japanese address first (Edit on the Hotels & SOS tab).');return}
+ if(!h.address_ja&&!h.name_ja&&!h.address){alert('Fill in this hotel\'s Japanese address first (Plan → Hotels → Edit).');return}
  const o=$('driver');o.innerHTML=`<button class="btn" style="position:absolute;top:14px;right:14px" onclick="this.parentNode.classList.remove('on')">✕ Close</button>
  <p style="font-size:26px;margin:0 0 18px">この住所までお願いします。</p>
  <p style="font-size:40px;font-weight:800;margin:0 0 16px;line-height:1.25">${esc(h.name_ja||h.name)}</p>
@@ -170,6 +170,9 @@ window.editHotel=id=>{const h=hotels.find(x=>x.id===id);
 window.editContact=ix=>{const c=ix==null?{name:'',phone:'',note:''}:contacts[ix];
  openForm(ix==null?'Add a contact':'Edit contact',[['name','Name'],['phone','Phone (with country code, e.g. +1 919…)'],['note','Note (e.g. "Dad", "travel insurance")']],c,
  o=>{if(ix==null)contacts.push(o);else contacts[ix]=o;save();render()},ix==null?null:()=>{contacts.splice(ix,1);save();render()})};
+function renderHotels(){const box=$('hotelsBox');if(!box)return;box.innerHTML=`<p class="small">Fill in each hotel's Japanese name and address once booked (copy them from the booking confirmation or Google Maps in Japanese). Then "Show to driver" puts it on screen in big text for a taxi driver or anyone you ask for directions.</p>
+ ${hotels.map(h=>`<div class="day"><h3 style="margin-bottom:2px">${esc(h.stop)}</h3>${hotelBlock(h,false)}</div>`).join('')}
+ `}
 function renderSOS(){const box=$('sosBox');if(!box)return;
  box.innerHTML=`<div class="day"><h3>🆘 Emergency numbers (Japan)</h3><div class="sosrow">
  <a class="btn danger" href="tel:110">🚓 110 — Police</a><a class="btn danger" href="tel:119">🚑 119 — Ambulance / Fire</a></div>
@@ -177,9 +180,7 @@ function renderSOS(){const box=$('sosBox');if(!box)return;
  <p><a href="tel:+81332245000">🇺🇸 US Embassy Tokyo: 03-3224-5000</a><br><a href="tel:+81663155900">🇺🇸 US Consulate Osaka-Kobe: 06-6315-5900</a> — lost passport or serious trouble</p>
  <p class="small">110 and 119 work from any phone, even without a Japanese SIM.</p></div>
  <div class="day"><h3>🗣️ Phrases for emergencies</h3><div class="phr"><div class="ja">助けてください</div><span class="small"><em>Tasukete kudasai</em> — Please help</span></div><div class="phr"><div class="ja">救急車をお願いします</div><span class="small"><em>Kyūkyūsha o onegai shimasu</em> — Please call an ambulance</span></div><div class="phr"><div class="ja">病院はどこですか？</div><span class="small"><em>Byōin wa doko desu ka?</em> — Where is the hospital?</span></div><div class="phr"><div class="ja">道に迷いました</div><span class="small"><em>Michi ni mayoimashita</em> — We\'re lost</span></div><div class="phr"><div class="ja">英語を話せる人はいますか？</div><span class="small"><em>Eigo o hanaseru hito wa imasu ka?</em> — Does anyone speak English?</span></div></div>
- ${phrasesCard()}${tzCard()}<h2>🏨 Hotels</h2><p class="small">Fill in each hotel's Japanese name and address once booked (copy them from the booking confirmation or Google Maps in Japanese). Then "Show to driver" puts it on screen in big text for a taxi driver or anyone you ask for directions.</p>
- ${hotels.map(h=>`<div class="day"><h3 style="margin-bottom:2px">${esc(h.stop)}</h3>${hotelBlock(h,false)}</div>`).join('')}
- <div class="day"><h3>📇 Group contacts</h3>${contacts.length?contacts.map((c,ix)=>`<p><strong>${esc(c.name)}</strong>${c.note?' <span class="small">('+esc(c.note)+')</span>':''} — ${c.phone?`<a href="${telHref(c.phone)}">${esc(c.phone)}</a>`:''} · <a href="#" onclick="editContact(${ix});return false">Edit</a></p>`).join(''):'<p class="small">Add everyone\'s phone numbers, plus anyone back home to call.</p>'}<button class="btn" onclick="editContact()">➕ Add contact</button></div>`;}
+ ${phrasesCard()}${tzCard()}<div class="day"><h3>📇 Group contacts</h3>${contacts.length?contacts.map((c,ix)=>`<p><strong>${esc(c.name)}</strong>${c.note?' <span class="small">('+esc(c.note)+')</span>':''} — ${c.phone?`<a href="${telHref(c.phone)}">${esc(c.phone)}</a>`:''} · <a href="#" onclick="editContact(${ix});return false">Edit</a></p>`).join(''):'<p class="small">Add everyone\'s phone numbers, plus anyone back home to call.</p>'}<button class="btn" onclick="editContact()">➕ Add contact</button></div>`;}
 
 // ---- PREP: travelers + pre-trip tasks ----
 function renderTasks(){const box=$('taskBox');if(!box)return;
@@ -201,7 +202,7 @@ function startJournal(db){journalCol=db.collection('trips');
  journalUnsub=journalCol.where('kind','==','journal').onSnapshot(s=>{journal=s.docs.map(d=>({_id:d.id,...d.data()}));renderJournal()},e=>{$('jStatus')&&($('jStatus').textContent='⚠️ Journal sync error: '+e.message)})}
 function shrinkPhoto(file){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>{let w=img.width,h=img.height,m=1100;if(w>m||h>m){const r=Math.min(m/w,m/h);w=Math.round(w*r);h=Math.round(h*r)}
  const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);let q=.72,u=c.toDataURL('image/jpeg',q);while(u.length>700000&&q>.35){q-=.1;u=c.toDataURL('image/jpeg',q)}URL.revokeObjectURL(img.src);res(u)};img.onerror=rej;img.src=URL.createObjectURL(file)})}
-function renderJournal(){const box=$('jList');if(!box)return;
+function renderJournal(){const box=$('jList');if(!box)return;if(typeof renderHome==='function'&&navReady)renderHome();
  const by={};journal.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.created||0)-(a.created||0)).forEach(j=>{(by[j.date]=by[j.date]||[]).push(j)});
  box.innerHTML=Object.keys(by).length?Object.entries(by).map(([d,arr])=>`<div class="day"><h3>${dayNum(d)?'Day '+dayNum(d)+' · ':''}${fmtDay(d)}</h3>${arr.map(j=>`<div class="jentry">${j.photo?`<img src="${j.photo}" alt="" loading="lazy">`:''}<p>${esc(j.text).replace(/\n/g,'<br>')}</p><p class="small">— ${esc(j.who||'someone')} · <a href="#" onclick="delJournal('${j._id}');return false">Delete</a></p></div>`).join('')}</div>`).join(''):'<p class="small">No entries yet. During the trip, add a photo and a few lines each day — after the trip this becomes your scrapbook.</p>';}
 window.delJournal=id=>{if(!confirm('Delete this journal entry?'))return;if(journalCol)journalCol.doc(id).delete();else{journal=journal.filter(j=>j._id!==id);try{localStorage.setItem('jtp-journal',JSON.stringify(journal))}catch(e){}renderJournal()}};
@@ -321,4 +322,67 @@ function phrasesCard(){return `<div class="day"><h3>💬 Everyday phrases</h3><p
 
 function renderRound2(){renderRemindersX();renderSakura();renderSouv();fetchWeather()}
 
-function renderExtras(){renderCountdown();renderMeBtn();renderToday();renderItinerary();renderTravel();renderSOS();wireTZ();renderTasks();renderRound2()}
+function renderExtras(){initNav();renderHome();renderPlan();renderCountdown();renderMeBtn();renderToday();renderItinerary();renderTravel();renderSOS();renderHotels();wireTZ();renderTasks();renderRound2()}
+
+// ===================== Round 3: simpler layout — intro, home, bottom tabs, plan hub =====================
+const HERO={file:'Itsukushima-jinja_torii_at_sunset%2C_Miyajima%2C_Japan%2C_20240816_1829_4161.jpg',
+ base:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/',credit:'Photo: Jakub Hałun · CC BY 4.0',
+ page:'https://commons.wikimedia.org/wiki/File:Itsukushima-jinja_torii_at_sunset,_Miyajima,_Japan,_20240816_1829_4161.jpg'};
+function heroURL(){const w=(window.innerWidth||400)*(window.devicePixelRatio||1)>1300?1920:1280;return `${HERO.base}${HERO.file}/${w}px-${HERO.file}`}
+const PAGES={home:{t:'Japan Trip',tab:'home'},today:{t:'Day by day',tab:'today'},ideas:{t:'Places',tab:'ideas'},map:{sec:'placesMap',t:'Places',tab:'ideas'},
+ plan:{t:'Plan',tab:'plan'},travel:{t:'Flights & trains',tab:'plan',back:'plan'},hotels:{t:'Hotels',tab:'plan',back:'plan'},bookings:{t:'Booking deadlines',tab:'plan',back:'plan'},
+ checklists:{t:'Checklists',tab:'plan',back:'plan'},sakura:{t:'Cherry blossoms',tab:'plan',back:'plan'},budget:{t:'Budget & souvenirs',tab:'plan',back:'plan'},journal:{t:'Trip journal',tab:'plan',back:'plan'},
+ sos:{t:'Help & phrases',tab:'sos'}};
+const ALIAS={prep:'checklists',itinerary:'today',travelers:'checklists'};
+let curPage='home';
+function go(id,noHash){id=ALIAS[id]||id;const pg=PAGES[id]||PAGES.home;if(!PAGES[id])id='home';curPage=id;
+ document.querySelectorAll('main section').forEach(s=>s.classList.toggle('active',s.id===(pg.sec||id)));
+ $('pageTitle').textContent=pg.t;$('backBtn').style.display=pg.back?'':'none';
+ document.querySelectorAll('#tabbar button').forEach(b=>b.classList.toggle('active',b.dataset.go===pg.tab));
+ document.body.classList.toggle('home',id==='home');window.scrollTo(0,0);
+ if(id==='map')setTimeout(()=>{if(typeof initMap==='function')initMap();if(typeof mapObj!=='undefined'&&mapObj)mapObj.invalidateSize()},120);
+ if(id==='today')setDayView(dayView);
+ if(!noHash&&location.hash.slice(1)!==id){try{history.pushState(null,'','#'+id)}catch(e){location.hash=id}}}
+window.go=go;
+window.addEventListener('popstate',()=>go(location.hash.slice(1)||'home',true));
+let dayView='one';
+function setDayView(v){dayView=v;document.querySelectorAll('#today .seg button').forEach(b=>b.classList.toggle('on',b.dataset.dv===v));$('todayBox').style.display=v==='one'?'':'none';$('days').style.display=v==='all'?'':'none'}
+
+// ---- intro ----
+window.showIntro=()=>{const el=$('intro');el.style.backgroundImage=`url("${heroURL()}")`;const c=$('introCredit');c.textContent=HERO.credit;c.href=HERO.page;
+ $('introNames').innerHTML=travelers.map(n=>`<button type="button" class="${n===me?'sel':''}" data-n="${esc(n)}" style="${n===me?'background:#fff;color:#13294b':''}">${esc(n)}</button>`).join('');
+ $('introNames').querySelectorAll('button').forEach(b=>b.onclick=()=>{setMe(b.dataset.n);showIntro()});
+ $('introForm').style.display=me&&travelers.includes(me)?'none':'flex';
+ el.classList.add('on')};
+function hideIntro(){$('intro').classList.remove('on');try{localStorage.setItem('jtp-intro','1')}catch(e){}}
+
+// ---- home ----
+function nextDeadlines(){const t=todayISO();return reminders.map((r,ix)=>({r,ix})).filter(x=>!doneR[x.ix]&&x.r[0]>=t).sort((a,b)=>(a.r[3]||a.r[0]).localeCompare(b.r[3]||b.r[0]))}
+function renderHome(){const hero=$('hero');if(!hero)return;hero.style.backgroundImage=`url("${heroURL()}")`;$('heroCredit').textContent=HERO.credit;$('heroCredit').href=HERO.page;
+ const t=todayISO(),nd=nextDeadlines();let html='';
+ if(t>=TRIP_START&&t<=TRIP_END){const its=ideas.filter(i=>i.trip_date===t),h=hotelFor(t);
+  html+=`<div class="panel" onclick="go('today')" style="cursor:pointer"><h3>📍 Today · Day ${dayNum(t)}</h3><p style="margin:2px 0">${wxLine(t)}</p><p class="small" style="margin:6px 0 0">${its.length?its.slice(0,3).map(i=>esc(i.title)).join(' · '):'Nothing planned — explore!'}${h?'<br>🏨 '+esc(h.name||h.stop):''}</p><p style="margin:8px 0 0;color:var(--blue);font-weight:600">Open today's plan ›</p></div>`}
+ if(nd.length){const {r}=nd[0],d=new Date(r[0]+'T12:00:00');
+  html+=`<div class="panel"><div class="small" style="font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Next up</div><div class="next"><div class="when">${d.toLocaleDateString('en-US',{month:'short'})}<br><span style="font-size:22px">${d.getDate()}</span></div><div><b>${esc(r[1])}</b><div class="small">${r[3]?'Opens '+jstToLocal(r[3])+' your time':esc(r[2]).slice(0,110)}</div></div></div>${nd.length>1?`<p style="margin:10px 0 0"><a href="#" onclick="go('bookings');return false">See all ${nd.length} deadlines ›</a></p>`:''}</div>`}
+ $('homeNow').innerHTML=html;
+ const filledH=hotels.filter(h=>h.name).length,doneT=tasks.filter(x=>x.done).length,fl=flights.find(f=>f.number);
+ const tiles=[['📅','Day by day','10 days · 5 stops','today'],['📍','Places & map',`${ideas.length} saved · ${ideas.filter(i=>i.priority==='must-do').length} must-dos`,'ideas'],
+  ['✈️','Flights & trains',fl?`${esc(fl.airline)} ${esc(fl.number)}`:'Add flight details','travel'],['🏨','Hotels',`${filledH} of ${hotels.length} filled in`,'hotels'],
+  ['⏰','Deadlines',nd.length?`${nd.length} coming up`:'All caught up','bookings'],['✅','Checklists',`${doneT} of ${tasks.length} done`,'checklists'],
+  ['💴','Budget','Spending & souvenirs','budget'],['🌸','Blossoms',Object.keys(sakura).length?'Forecast added':'Forecasts mid-Dec','sakura'],
+  ['📔','Journal',journal.length?`${journal.length} entries`:'Photos & notes','journal'],['🆘','Help','Emergency & phrases','sos']];
+ $('tiles').innerHTML=tiles.map(([ic,t1,sub,id])=>`<button class="tile" onclick="go('${id}')"><span class="ic">${ic}</span><span><b>${t1}</b><small>${sub}</small></span></button>`).join('')}
+function renderPlan(){const box=$('planList');if(!box)return;const nd=nextDeadlines(),fl=flights.find(f=>f.number);
+ const rows=[['✈️','Flights & trains',fl?`${esc(fl.airline)} ${esc(fl.number)} · JR Pass check · luggage`:'Flights, train legs, JR Pass check, luggage','travel'],['🏨','Hotels',`${hotels.filter(h=>h.name).length} of ${hotels.length} filled in · show-to-driver cards`,'hotels'],
+  ['⏰','Booking deadlines',nd.length?`${nd.length} coming up · add to calendar`:'All caught up','bookings'],['✅','Checklists',`${tasks.filter(x=>x.done).length} of ${tasks.length} done · packing list`,'checklists'],
+  ['💴','Budget & souvenirs','Estimates, spending, souvenir list','budget'],['🌸','Cherry blossoms','Bloom forecast for each city','sakura'],['📔','Trip journal','Photos and notes from each day','journal']];
+ box.innerHTML=`<div class="list">${rows.map(([ic,t1,sub,id])=>`<button onclick="go('${id}')"><span class="ic">${ic}</span><span class="txt">${t1}<small>${sub}</small></span><span class="chev">›</span></button>`).join('')}</div>`}
+
+let navReady=false;
+function initNav(){if(navReady)return;navReady=true;
+ document.querySelectorAll('#tabbar button').forEach(b=>b.onclick=()=>go(b.dataset.go));
+ $('backBtn').onclick=()=>go(PAGES[curPage].back||'home');
+ document.querySelectorAll('#today .seg button').forEach(b=>b.onclick=()=>setDayView(b.dataset.dv));
+ $('introGo').onclick=hideIntro;$('introForm').onsubmit=e=>{e.preventDefault();const n=new FormData(e.target).get('n').trim();if(n){setMe(n);showIntro()}};
+ go(location.hash.slice(1)||'home',true);
+ let seen='';try{seen=localStorage.getItem('jtp-intro')}catch(e){}if(!seen)showIntro();}

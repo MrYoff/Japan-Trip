@@ -1,7 +1,7 @@
 // Offline support for the Japan Trip planner.
 // Page + scripts: network first (so updates show up), cached copy when offline.
 // Libraries, photos and map tiles: cached as you use them.
-const SHELL='jtp-shell-v2', RUNTIME='jtp-runtime-v1', MAX_RUNTIME=400;
+const SHELL='jtp-shell-v3', RUNTIME='jtp-runtime-v1', MAX_RUNTIME=400;
 const SHELL_FILES=['./','./index.html','./app.js','./manifest.json','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png','./icons/favicon-32.png',
  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
  'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js','https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js'];

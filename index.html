@@ -10,98 +10,156 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-:root{--blue:#2563eb;--amber:#d97706;--ink:#17202a;--mut:#5b6b7f;--line:#d5dbe3;--bg:#f6f8fb;--card:#fff;--th:#eff6ff;--soft:#e8eef6;--mustbg:#dbeafe;--nicebg:#fef3c7;--catbg:#eef2f7;--link:#1d4ed8}
-[data-theme=dark]{--ink:#e6edf5;--mut:#9fb0c3;--line:#2b3a4b;--bg:#0e151d;--card:#17212c;--th:#1d2b3b;--soft:#22303f;--mustbg:#1e3a66;--nicebg:#4a3510;--catbg:#22303f;--link:#8ab4ff}
-a{color:var(--link)} input,select,textarea{background:var(--card);color:var(--ink)}
+:root{--blue:#b83a63;--pink:#f6d7e1;--navy:#13294b;--amber:#c9861a;--ink:#1d2433;--mut:#6b7385;--line:#ebe4e6;--bg:#faf6f4;--card:#fff;--th:#fbeff3;--soft:#f3ecee;--mustbg:#fbe3ea;--nicebg:#fdf1dc;--catbg:#f3ecee;--link:#a2325a;--shadow:0 1px 2px rgba(30,20,40,.05),0 4px 16px rgba(30,20,40,.06);--serif:"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",Georgia,"Times New Roman",serif}
+[data-theme=dark]{--blue:#e07a9b;--pink:#4a2632;--ink:#ece6ea;--mut:#a59aa3;--line:#2e2a33;--bg:#131117;--card:#1d1a22;--th:#2a2230;--soft:#26222c;--mustbg:#47202f;--nicebg:#43331a;--catbg:#26222c;--link:#f09ab6;--shadow:none}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;color:var(--ink);background:var(--bg);line-height:1.45;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+a{color:var(--link)}h1,h2,h3{font-family:var(--serif);letter-spacing:.01em}h2{font-size:24px;margin:18px 0 10px}h3{font-size:18px;margin:0 0 8px}
+input,select,textarea{background:var(--card);color:var(--ink);padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin:4px 4px 4px 0;font:inherit;font-size:16px}
 [data-theme=dark] .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9)}
-[data-theme=dark] header{background:#0a1b30}
-*{box-sizing:border-box}body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;color:var(--ink);background:var(--bg)}
-header{background:#102a4c;color:#fff;padding:20px}header h1{margin:0 0 4px;font-size:26px}header p{margin:2px 0;color:#cfe0f5}
-nav{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--line);padding:8px 12px;z-index:1000;display:flex;gap:8px;flex-wrap:wrap}
-nav button,.btn{color:var(--ink);border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;cursor:pointer;font-weight:600}
-nav button.active{background:var(--blue);color:#fff;border-color:var(--blue)}
-main{max-width:1100px;margin:0 auto;padding:16px}section{display:none}section.active{display:block}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}.card .body{padding:12px 14px}.card img{width:100%;height:170px;object-fit:cover;display:block;background:var(--soft)}
-.noimg{height:170px;display:flex;align-items:center;justify-content:center;background:var(--soft);color:var(--mut);font-weight:700;letter-spacing:.08em}
-.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.8em;font-weight:700;margin:0 6px 6px 0}.must{background:var(--mustbg);border:1px solid var(--blue)}.nice{background:var(--nicebg);border:1px solid var(--amber)}
-.cat{background:var(--catbg);border:1px solid var(--line)} .small{font-size:.92em;color:var(--mut)}
-input,select,textarea{padding:8px;border:1px solid var(--line);border-radius:8px;margin:4px 4px 4px 0}table{border-collapse:collapse;width:100%;background:var(--card)}th,td{border:1px solid var(--line);padding:8px;text-align:left;vertical-align:top}th{background:var(--th)}
-#map{height:520px;border-radius:12px;border:1px solid var(--line)} .pin{font-size:18px;text-align:center;line-height:30px;width:30px;height:30px;border-radius:50%;background:var(--card);border:2px solid #102a4c}
-.legend{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:10px 0}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:180px;flex:1}.stats{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}.stat b{font-size:22px;display:block}
+/* top bar */
+.topbar{position:sticky;top:0;z-index:1000;display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.topbar h1{font-size:20px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar .back{border:0;background:none;color:var(--blue);font-size:17px;font-weight:600;padding:4px 6px 4px 0;cursor:pointer}
+.dot{width:10px;height:10px;border-radius:50%;background:#c9c2c6;flex:0 0 auto}.dot.ok{background:#2fa36b}.dot.off{background:#d9922b}.dot.err{background:#d64545}
+body.home .topbar{display:none}
+/* bottom tab bar */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:1500;display:flex;justify-content:space-around;background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+.tabbar button{flex:1;max-width:120px;border:0;background:none;color:var(--mut);font:600 11px system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0;cursor:pointer}
+.tabbar button span{font-size:22px;line-height:1;filter:grayscale(1);opacity:.75}.tabbar button.active{color:var(--blue)}.tabbar button.active span{filter:none;opacity:1}
+main{max-width:860px;margin:0 auto;padding:4px 16px 24px}section{display:none}section.active{display:block;animation:fade .2s ease}@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+/* cards */
+.day,.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin:12px 0;box-shadow:var(--shadow)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}.card .body{padding:12px 16px 14px}.card img{width:100%;height:160px;object-fit:cover;display:block;background:var(--soft)}
+.noimg{height:160px;display:flex;align-items:center;justify-content:center;background:var(--soft);color:var(--mut);font-weight:700;letter-spacing:.08em}
+.badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.78em;font-weight:700;margin:0 6px 6px 0}.must{background:var(--mustbg);color:var(--blue)}.nice{background:var(--nicebg);color:#8a5a0c}[data-theme=dark] .nice{color:#f3c77a}
+.cat{background:var(--catbg)}.small{font-size:.9em;color:var(--mut)}
+table{border-collapse:collapse;width:100%;background:var(--card);font-size:.95em}th,td{border-bottom:1px solid var(--line);padding:9px 8px;text-align:left;vertical-align:top}th{background:var(--th);font-weight:700}
+.btn{color:var(--ink);border:1px solid var(--line);background:var(--card);border-radius:999px;padding:10px 16px;cursor:pointer;font-weight:600;font-size:15px}
+.btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}.btn.danger{background:#c62828;color:#fff;border-color:#c62828}a.btn{text-decoration:none;display:inline-block}.btn.block{display:block;width:100%;text-align:center}
+#map{height:62vh;min-height:380px;border-radius:18px;border:1px solid var(--line)}.pin{font-size:18px;text-align:center;line-height:30px;width:30px;height:30px;border-radius:50%;background:var(--card);border:2px solid var(--navy)}
+.legend{font-size:.88em;color:var(--mut);margin:8px 2px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;min-width:150px;flex:1;box-shadow:var(--shadow)}.stats{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}.stat b{font-size:21px;display:block;font-family:var(--serif)}
 .res{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
-.day{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:10px 0}
-label.chk{display:block;padding:6px 0}
-header{padding-top:max(20px,env(safe-area-inset-top))}
-nav{align-items:center;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}nav::-webkit-scrollbar{display:none}nav button{white-space:nowrap;flex:0 0 auto}
-textarea.bk{width:100%}.phr{border-top:1px solid var(--line);padding:8px 0}.phr .ja{font-size:1.4em;font-weight:700}#countdown{font-weight:700;color:#ffd1dc}
-.btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}.btn.danger{background:#c62828;color:#fff;border-color:#c62828}a.btn{text-decoration:none;display:inline-block}
-.warn{background:#fff4e5;border:1px solid #f0a040;color:#7a4300;border-radius:8px;padding:6px 10px;margin:6px 0;font-size:.92em}[data-theme=dark] .warn{background:#3d2a10;color:#ffd9a8}
-.badge.ok{background:#dcfce7;border:1px solid #16a34a}[data-theme=dark] .badge.ok{background:#14361f}
-.vbtn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:4px 12px;cursor:pointer;font-weight:700}.vbtn.on{background:var(--blue);color:#fff;border-color:var(--blue)}
-.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}.chip{flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:6px 8px;font-weight:800;font-size:18px;cursor:pointer;min-width:58px}.chip small{display:block;font-weight:500;font-size:10px;line-height:1.2;color:var(--mut)}.chip.on{background:var(--blue);color:#fff;border-color:var(--blue)}.chip.on small{color:#dbe7ff}
-.leg{border-top:1px solid var(--line);padding:8px 0}.leg:first-of-type{border-top:0}
-.sosrow{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
-.ja{font-size:1.15em}
-.task{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line);padding:4px 0}.task label{flex:1}.task.done label{color:var(--mut);text-decoration:line-through}.task select{margin:0}
-.jentry img{width:100%;max-width:520px;border-radius:10px;display:block;margin:6px 0}
-#modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;z-index:3000;overflow:auto;padding:30px 12px}#modal.on{display:flex}
-.mbox{background:var(--card);color:var(--ink);border-radius:14px;padding:18px;width:100%;max-width:520px}
-label.fl{display:block;font-size:.9em;color:var(--mut);margin:6px 0}label.fl input,label.fl select,label.fl textarea{display:block;width:100%;margin:2px 0 0;font-size:16px}
+label.chk{display:block;padding:8px 0;border-bottom:1px solid var(--line)}label.chk:last-child{border-bottom:0}
+/* segmented control */
+.seg{display:flex;background:var(--soft);border-radius:12px;padding:3px;margin:12px 0}.seg button{flex:1;border:0;background:none;padding:8px;border-radius:10px;font-weight:600;color:var(--mut);cursor:pointer;font-size:15px}.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+/* hero + intro */
+.hero{position:relative;border-radius:24px;overflow:hidden;min-height:300px;margin:calc(10px + env(safe-area-inset-top)) 0 14px;color:#fff;background:linear-gradient(160deg,#f3b6c8,#7c8fb8 60%,#13294b);background-size:cover;background-position:center;display:flex;flex-direction:column;justify-content:flex-end;padding:22px}
+.hero::before{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05) 30%,rgba(10,15,35,.72))}.hero>*{position:relative}
+.hero .eyebrow{font-size:13px;letter-spacing:.14em;text-transform:uppercase;opacity:.9}.hero h1{font-size:38px;margin:4px 0 6px;line-height:1.1;text-shadow:0 2px 12px rgba(0,0,0,.3)}.hero p{margin:2px 0;opacity:.95}
+.hero .count{display:inline-block;margin-top:10px;background:rgba(255,255,255,.18);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:6px 14px;font-weight:700}
+.credit{position:absolute;right:10px;top:8px;font-size:10px;opacity:.75;color:#fff;text-decoration:none}
+#intro{position:fixed;inset:0;z-index:5000;background:#13294b;background-size:cover;background-position:center;color:#fff;display:none;flex-direction:column;justify-content:flex-end;padding:28px 24px calc(34px + env(safe-area-inset-bottom))}
+#intro.on{display:flex;animation:fade .4s ease}#intro::before{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0) 25%,rgba(8,12,30,.85) 75%)}#intro>*:not(.credit){position:relative;max-width:560px;width:100%;margin-left:auto;margin-right:auto}
+#intro h1{font-size:44px;line-height:1.05;margin:0 0 10px}#intro p{font-size:17px;margin:4px 0;opacity:.95}#intro .route{font-size:15px;opacity:.85;margin:10px 0 18px}
+#intro .names{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px}#intro .names button,#intro .go{border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.15);color:#fff;border-radius:999px;padding:10px 18px;font-weight:700;font-size:16px;cursor:pointer;backdrop-filter:blur(6px)}
+#intro .go{background:#fff;color:#13294b;border-color:#fff;width:100%;padding:14px;font-size:17px}#intro input{background:rgba(255,255,255,.95);color:#13294b;border:0}
+/* home tiles */
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}@media(min-width:640px){.tiles{grid-template-columns:repeat(3,1fr)}}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;text-align:left;cursor:pointer;box-shadow:var(--shadow);color:var(--ink);font:inherit;min-height:92px;display:flex;flex-direction:column;justify-content:space-between}
+.tile .ic{font-size:24px}.tile b{font-size:15px;display:block;margin-top:6px}.tile small{color:var(--mut);font-size:12.5px}
+.next{display:flex;gap:14px;align-items:center}.next .when{background:var(--pink);color:var(--blue);border-radius:14px;padding:8px 10px;text-align:center;min-width:58px;font-weight:800;line-height:1.1}[data-theme=dark] .next .when{color:#ffd1dc}.next .when small{display:block;font-size:11px;font-weight:600}
+.list{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow);margin:12px 0}.list button{display:flex;width:100%;align-items:center;gap:12px;border:0;border-bottom:1px solid var(--line);background:none;padding:14px 16px;font:inherit;color:var(--ink);cursor:pointer;text-align:left}.list button:last-child{border-bottom:0}.list .ic{font-size:22px;width:28px;text-align:center}.list .txt{flex:1}.list .txt small{display:block;color:var(--mut);font-size:13px}.list .chev{color:var(--mut);font-size:20px}
+.foot{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin:20px 0 8px}.foot .small{text-align:center;width:100%}
+details.more{margin:10px 0}details.more summary{cursor:pointer;font-weight:600;color:var(--blue);padding:6px 0;list-style:none}details.more summary::-webkit-details-marker{display:none}
+/* existing feature styles */
+textarea.bk{width:100%}.phr{border-top:1px solid var(--line);padding:10px 0}.phr .ja{font-size:1.4em;font-weight:700}
+.warn{background:#fff4e5;border:1px solid #f0c27a;color:#7a4300;border-radius:12px;padding:8px 12px;margin:6px 0;font-size:.92em}[data-theme=dark] .warn{background:#3d2a10;color:#ffd9a8;border-color:#6b4a1a}
+.badge.ok{background:#dcfce7;color:#166534}[data-theme=dark] .badge.ok{background:#14361f;color:#a7f3c4}
+.vbtn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:5px 12px;cursor:pointer;font-weight:700}.vbtn.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}.chip{flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;padding:7px 8px;font-weight:800;font-size:18px;cursor:pointer;min-width:58px;font-family:var(--serif)}.chip small{display:block;font-weight:500;font-size:10px;line-height:1.2;color:var(--mut);font-family:system-ui,sans-serif}.chip.on{background:var(--blue);color:#fff;border-color:var(--blue)}.chip.on small{color:#ffe3ec}
+.leg{border-top:1px solid var(--line);padding:10px 0}.leg:first-of-type{border-top:0;padding-top:2px}
+.sosrow{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.ja{font-size:1.15em}
+.task{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line);padding:6px 0}.task label{flex:1}.task.done label{color:var(--mut);text-decoration:line-through}.task select{margin:0;padding:6px;font-size:14px}
+.jentry img{width:100%;max-width:520px;border-radius:14px;display:block;margin:6px 0}
+#modal{position:fixed;inset:0;background:rgba(10,10,20,.45);display:none;align-items:flex-start;justify-content:center;z-index:3000;overflow:auto;padding:30px 12px}#modal.on{display:flex}
+.mbox{background:var(--card);color:var(--ink);border-radius:20px;padding:20px;width:100%;max-width:520px}
+label.fl{display:block;font-size:.9em;color:var(--mut);margin:6px 0}label.fl input,label.fl select,label.fl textarea{display:block;width:100%;margin:2px 0 0}
 #driver{position:fixed;inset:0;background:#fff;color:#000;z-index:4000;display:none;padding:70px 24px 24px;overflow:auto}#driver.on{display:block}
 #installTip{display:none}
 #lodgingTable,#souvBox,#expList,#sakuraBox{overflow-x:auto;max-width:100%}
 .wx{font-weight:600}.chk.late strong{color:#c62828}.doneRow td{color:var(--mut);text-decoration:line-through}.doneRow td:first-child{text-decoration:none}
-</style></head><body>
-<header><h1>🌸 Japan Trip Planner</h1><p id="countdown"></p><p>March 19–28, 2027 · 4 travelers · Cherry blossoms &amp; Mount Fuji</p><p>Tokyo → Kawaguchiko → Kyoto → Nara / Osaka · No car — trains &amp; transit</p></header>
-<div id="syncBar" class="small" style="padding:6px 16px;background:var(--card);border-bottom:1px solid var(--line)"><span id="sync">…</span></div>
-<nav>
-<button data-tab="today" class="active">Today</button><button data-tab="ideas">Ideas</button><button data-tab="map">Map</button><button data-tab="itinerary">Itinerary</button><button data-tab="travel">Getting Around</button>
-<button data-tab="budget">Budget</button><button data-tab="bookings">Booking Deadlines</button><button data-tab="prep">Prep</button><button data-tab="sos">Hotels &amp; SOS</button><button data-tab="journal">Journal</button><button id="meBtn" type="button" onclick="pickMe()">👤</button><button id="themeBtn" type="button">🌙 Dark</button>
-</nav>
+.filters{display:flex;flex-wrap:wrap;gap:4px}.filters input,.filters select{flex:1;min-width:140px}
+</style>
+</head><body class="home">
+<div id="intro"><a class="credit" id="introCredit" target="_blank" rel="noopener"></a>
+ <div style="font-size:13px;letter-spacing:.16em;text-transform:uppercase;opacity:.85">日本 · March 19–28, 2027</div>
+ <h1>Our Japan Trip</h1>
+ <p>Cherry blossoms, Mount Fuji, and ten days together.</p>
+ <p class="route">Tokyo → Kawaguchiko → Kyoto → Nara → Osaka</p>
+ <p style="font-weight:700;margin-top:6px">Who's this?</p>
+ <div class="names" id="introNames"></div>
+ <form id="introForm" style="display:flex;gap:6px;margin-bottom:14px"><input name="n" placeholder="Type your name" style="flex:1;margin:0"><button class="go" style="width:auto;padding:10px 18px">OK</button></form>
+ <button class="go" id="introGo">Let's go →</button>
+</div>
+
+<div class="topbar"><button class="back" id="backBtn" style="display:none">‹ Back</button><h1 id="pageTitle">Japan Trip</h1><span class="dot" id="syncDot" title=""></span></div>
+
 <main>
-<section id="today" class="active"><div id="installTip" class="day"><strong>📲 Put this on your home screen:</strong> <span id="installHow"></span> <a href="#" class="small" onclick="this.parentNode.style.display='none';try{localStorage.setItem('jtp-hideTip','1')}catch(e){};return false">Hide</a></div><div id="todayBox"></div></section>
+<!-- HOME -->
+<section id="home" class="active">
+ <div class="hero" id="hero"><a class="credit" id="heroCredit" target="_blank" rel="noopener"></a>
+  <div class="eyebrow">Japan · March 19–28, 2027</div><h1>Our Japan Trip 🌸</h1>
+  <p>Tokyo → Kawaguchiko → Kyoto → Nara → Osaka</p><div><span class="count" id="countdown"></span></div></div>
+ <div id="installTip" class="panel" style="padding:12px 16px"><strong>📲 Add to your home screen</strong><br><span id="installHow" class="small"></span> <a href="#" class="small" onclick="this.parentNode.style.display='none';try{localStorage.setItem('jtp-hideTip','1')}catch(e){};return false">Got it</a></div>
+ <div id="homeNow"></div>
+ <div class="tiles" id="tiles"></div>
+ <div class="foot"><button class="btn" id="meBtn" type="button" onclick="pickMe()">👤</button><button class="btn" id="themeBtn" type="button">🌙 Dark</button><button class="btn" type="button" onclick="showIntro()">🌸 Intro</button><p class="small" id="sync">…</p></div>
+</section>
+
+<!-- DAYS -->
+<section id="today"><div class="seg"><button class="on" data-dv="one">One day</button><button data-dv="all">All 10 days</button></div><div id="todayBox"></div><div id="days" style="display:none"></div></section>
+
+<!-- PLACES -->
 <section id="ideas">
-<div class="day" id="addBox"><h3 style="margin-top:4px">🔎 Find a place in Japan</h3>
-<form id="findForm"><input id="findQ" type="search" placeholder="e.g. Ichiran Shibuya, teamLab, Fushimi Inari" size="34" required><button class="btn">Search</button></form>
-<div id="findResults"></div>
-<h3 style="margin-top:14px">➕ Add it to the plan</h3><p class="small" id="pickedNote"></p><form id="addForm"><input name="title" required placeholder="Title"><input name="city" required placeholder="City"><select name="category"><option>Sight</option><option>Food</option><option>Shopping</option><option>History</option><option>Experience</option><option>Transport</option></select><input name="trip_date" type="date"><input name="estimated_cost_yen" type="number" placeholder="Cost ¥" min="0"><select name="priority"><option value="nice-to-have">Nice-to-have</option><option value="must-do">★ Must-do</option></select><br><textarea name="notes" rows="2" cols="60" placeholder="Notes"></textarea><br><button class="btn" type="submit">Add idea</button></form><p class="small">Or skip the search and just type a title and city.</p></div>
-<h3>Search your plan</h3><div><input id="q" type="search" placeholder="Search saved places, notes…" size="28">
-<select id="fCity"><option value="">All cities</option></select><select id="fCat"><option value="">All categories</option></select>
-<select id="fPri"><option value="">All priorities</option><option value="must-do">★ Must-do</option><option value="nice-to-have">Nice-to-have</option></select>
-<select id="fSort"><option value="date">Sort by day</option><option value="votes">Sort by votes 👍</option></select></div>
-<div class="stats"><div class="stat"><b id="stCount">–</b>Places</div><div class="stat"><b id="stMust">–</b>Must-dos</div><div class="stat"><b id="stCost">–</b>Priced ideas / person</div></div>
-<div id="cards" class="grid"></div>
-
-<p class="small">Ideas, expenses and checklists are shared with everyone who has the link once Firebase is connected (status shown at the top).</p>
+ <div class="seg"><button class="on" onclick="go('ideas')">List</button><button onclick="go('map')">Map</button></div>
+ <input id="q" type="search" placeholder="🔎 Search places…" style="width:100%;margin:0"><details class="more"><summary>Filter &amp; sort</summary><div class="filters"><select id="fCity"><option value="">All cities</option></select><select id="fCat"><option value="">All types</option></select><select id="fPri"><option value="">Any priority</option><option value="must-do">★ Must-do</option><option value="nice-to-have">Nice-to-have</option></select><select id="fSort"><option value="date">Sort by day</option><option value="votes">Most votes 👍</option></select></div></details>
+ <p class="small" style="margin:6px 2px"><b id="stCount">–</b> places · <b id="stMust">–</b> must-dos · <b id="stCost">–</b> per person</p>
+ <details class="more" id="addDetails"><summary>➕ Add a place</summary>
+ <div class="panel" id="addBox"><h3>Find a place</h3>
+ <form id="findForm" style="display:flex;gap:4px"><input id="findQ" type="search" placeholder="e.g. Ichiran Shibuya, teamLab" required style="flex:1"><button class="btn">Search</button></form>
+ <div id="findResults"></div>
+ <h3 style="margin-top:14px">Details</h3><p class="small" id="pickedNote"></p><form id="addForm"><input name="title" required placeholder="Title"><input name="city" required placeholder="City"><select name="category"><option>Sight</option><option>Food</option><option>Shopping</option><option>History</option><option>Experience</option><option>Transport</option></select><input name="trip_date" type="date"><input name="estimated_cost_yen" type="number" placeholder="Cost ¥" min="0"><select name="priority"><option value="nice-to-have">Nice-to-have</option><option value="must-do">★ Must-do</option></select><textarea name="notes" rows="2" style="width:100%" placeholder="Notes"></textarea><button class="btn primary" type="submit">Add place</button></form><p class="small">You can skip the search and just type a title and city.</p></div></details>
+ <div id="cards" class="grid"></div>
+</section>
+<section id="placesMap">
+ <div class="seg"><button onclick="go('ideas')">List</button><button class="on" onclick="go('map')">Map</button></div>
+ <div id="map"></div><p class="legend">▲ Sight · ■ Food · ◆ Shopping · ★ History · ● Experience · ➤ Transport — switch English / 日本語 labels in the map's corner.</p><div id="mapList"></div>
 </section>
 
-<section id="map"><div class="legend"><strong>Switch map labels between English and 日本語 with the box in the map's top-right corner.</strong><br><strong>Legend — pins use different shapes/symbols per category (colorblind-safe):</strong><br>▲ Sight · ■ Food · ◆ Shopping · ★ History · ● Experience · ➤ Transport</div><div id="map"></div><div id="mapList"></div></section>
-
-<section id="itinerary"><h2>Day by day</h2><p class="small">Each day shows the hotel, trains, plans and a rainy-day backup (typing in a backup box saves it for everyone).</p><div id="days"></div></section>
-<section id="travel"><h2>Getting around</h2><div id="travelBox"></div></section>
-<section id="sos"><h2>Hotels &amp; SOS</h2><div id="sosBox"></div></section>
-<section id="journal"><h2>Trip journal</h2><div class="day"><form id="jForm"><input name="date" type="date" required> <input name="photo" type="file" accept="image/*"><br><textarea name="text" rows="3" style="width:100%" placeholder="What happened today? Best food, funniest moment…" required></textarea><br><button class="btn primary">Add entry</button> <span id="jStatus" class="small"></span></form></div><div id="jList"></div></section>
-
-<section id="budget"><h2>Budget</h2>
-<div class="stats"><div class="stat"><b id="bLodging">–</b>Lodging (9 nights)</div><div class="stat"><b id="bDaily">–</b>Daily costs, family × 10 days</div><div class="stat"><b id="bFlights">–</b>Flights, family of 4</div><div class="stat"><b id="bIdeas">–</b>Priced ideas, family of 4</div></div>
-<h3>Yen → Dollar converter</h3><p>Reference rate (Nov 4, 2026, Frankfurter): ¥<span id="rate">158.27</span> = $1</p><input id="yenIn" type="number" placeholder="¥ amount"> = <strong id="usdOut">$0.00</strong>
-<h3>Lodging plan</h3><div id="lodgingTable"></div>
-<h3>Daily assumptions</h3><p>Per person per day — Breakfast (konbini): <input id="dB" type="number" value="500"> Meals: <input id="dM" type="number" value="4000"> Transit: <input id="dT" type="number" value="1200"> Flight per person (USD): <input id="fPP" type="number" value="2082"> <button class="btn" id="recalc">Recalculate</button></p>
-<h3>🎁 Souvenir list</h3><div id="souvBox"></div>
-<h3>Spending tracker</h3><form id="expForm"><input name="label" required placeholder="What did you spend on?"><input name="amount_yen" required type="number" min="0" placeholder="¥ amount"><button class="btn">Add expense</button></form><div id="expList"></div>
+<!-- PLAN hub + sub-pages -->
+<section id="plan"><div id="planList"></div></section>
+<section id="travel"><div id="travelBox"></div></section>
+<section id="hotels"><div id="hotelsBox"></div></section>
+<section id="bookings"><div id="reminders" class="panel"></div></section>
+<section id="checklists"><div class="panel"><h3>✅ Before we go</h3><div id="taskBox"></div></div><div class="panel"><h3>🎒 Packing &amp; daily carry</h3><div id="checks"></div><button class="btn" id="resetChecks">Reset daily carry</button></div></section>
+<section id="sakura"><div class="panel"><p class="small">No real 2027 forecasts yet (checked Nov 4, 2026); the first ones usually come out mid-December to late January. When they do (e.g. Weathernews or Japan Meteorological Corp.), enter each city's dates here and every day of the trip will show its bloom status.</p><div id="sakuraBox"></div></div></section>
+<section id="budget">
+ <div class="stats"><div class="stat"><b id="bLodging">–</b>Lodging (9 nights)</div><div class="stat"><b id="bDaily">–</b>Daily costs, 4 × 10 days</div><div class="stat"><b id="bFlights">–</b>Flights, 4 people</div><div class="stat"><b id="bIdeas">–</b>Planned places, 4 people</div></div>
+ <div class="panel"><h3>💱 Yen → dollars</h3><p class="small">Rate (Nov 4, 2026): ¥<span id="rate">158.27</span> = $1</p><input id="yenIn" type="number" placeholder="¥ amount"> = <strong id="usdOut">$0.00</strong></div>
+ <div class="panel"><h3>🧾 Spending tracker</h3><form id="expForm" style="display:flex;flex-wrap:wrap;gap:4px"><input name="label" required placeholder="What for?" style="flex:2"><input name="amount_yen" required type="number" min="0" placeholder="¥" style="flex:1;min-width:90px"><button class="btn primary">Add</button></form><div id="expList"></div></div>
+ <div class="panel"><h3>🎁 Souvenirs</h3><div id="souvBox"></div></div>
+ <details class="more"><summary>Lodging plan &amp; budget assumptions</summary>
+ <div class="panel"><div id="lodgingTable"></div></div>
+ <div class="panel"><h3>Daily assumptions (per person per day)</h3><label class="fl">Breakfast (konbini) ¥<input id="dB" type="number" value="500"></label><label class="fl">Meals ¥<input id="dM" type="number" value="4000"></label><label class="fl">Transit ¥<input id="dT" type="number" value="1200"></label><label class="fl">Flight per person (USD)<input id="fPP" type="number" value="2082"></label><button class="btn" id="recalc">Recalculate</button></div></details>
 </section>
+<section id="journal"><div class="panel"><form id="jForm"><input name="date" type="date" required> <input name="photo" type="file" accept="image/*"><textarea name="text" rows="3" style="width:100%" placeholder="What happened today? Best food, funniest moment…" required></textarea><button class="btn primary">Add entry</button> <span id="jStatus" class="small"></span></form></div><div id="jList"></div></section>
 
-<section id="bookings"><h2>Booking deadlines</h2><div id="reminders"></div></section>
-
-<section id="prep"><h2>Prep</h2>
-<div class="day"><h3>🌸 Sakura forecast watch</h3><p>Status (checked Nov 4, 2026): No genuine 2027 forecast is available yet. Dates currently circulating are JMA 1991–2020 averages / historical estimates. First real forecasts are expected mid-December 2026 to late January 2027. When they come out (e.g. Weathernews or Japan Meteorological Corporation), enter each city's dates below. The Today and Itinerary tabs will then show bloom status for every day.</p><div id="sakuraBox"></div></div>
-<div class="day"><h3>✅ Before-we-go checklist</h3><div id="taskBox"></div></div>
-<div class="day"><h3>🎒 Packing &amp; daily carry checklists</h3><div id="checks"></div><button class="btn" id="resetChecks">Reset daily carry</button></div>
-</section>
+<!-- HELP -->
+<section id="sos"><div id="sosBox"></div></section>
 </main>
+
+<nav class="tabbar" id="tabbar">
+ <button data-go="home" class="active"><span>🏠</span>Home</button>
+ <button data-go="today"><span>📅</span>Days</button>
+ <button data-go="ideas"><span>📍</span>Places</button>
+ <button data-go="plan"><span>🧳</span>Plan</button>
+ <button data-go="sos"><span>🆘</span>Help</button>
+</nav>
 <div id="modal" onclick="if(event.target===this)closeModal()"><div class="mbox"></div></div><div id="driver"></div>
+
 <script src="app.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -165,7 +223,7 @@ let tripDoc=null;
 function save(){const all={ideas,expenses,reminders:doneR,checks:doneC,travelers,votes,hotels,legs,backups,tasks,contacts,flights,sakura,souvenirs};
  Object.entries(all).forEach(([k,v])=>store.set(k,v));
  if(tripDoc)tripDoc.set({...all,updated:Date.now()}).catch(e=>setSync('⚠️ Save failed: '+e.message))}
-function setSync(t){const el=document.getElementById('sync');if(el)el.textContent=t}
+function setSync(t){const el=document.getElementById('sync');if(el)el.textContent=t;const d=document.getElementById('syncDot');if(d){d.title=t;d.className='dot '+(/🟢/.test(t)?'ok':/📴|Offline/i.test(t)?'off':/⚠️/.test(t)?'err':'')}}
 function startSync(){
  if(!FIREBASE_CONFIG){setSync('💾 Saved on this device only');return}
  if(!window.firebase){setSync('⚠️ Could not load Firebase — check your connection and refresh');return}
@@ -186,7 +244,7 @@ function startSync(){
  }catch(e){setSync('⚠️ Sync error: '+e.message)}
 }
 const $=id=>document.getElementById(id);const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-document.querySelectorAll('nav button[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button[data-tab]').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('main section').forEach(s=>s.classList.remove('active'));$(b.dataset.tab).classList.add('active');window.scrollTo(0,0);if(b.dataset.tab==='map')setTimeout(initMap,100)});
+// navigation lives in app.js (go)
 function filters(){['fCity','fCat'].forEach((id,ix)=>{const sel=$(id),cur=sel.value;sel.length=1;const vals=[...new Set(ideas.map(i=>ix?i.category:i.city))].sort();vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o)});sel.value=cur})}
 function render(){
  const q=$('q').value.toLowerCase(),fc=$('fCity').value,fk=$('fCat').value,fp=$('fPri').value;
