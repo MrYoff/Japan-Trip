@@ -191,8 +191,9 @@ window.editTravelers=()=>{const v=prompt('Everyone on the trip, separated by com
 
 // ---- JOURNAL (each entry is its own Firestore doc so photos don't bloat the plan) ----
 let journalCol=null,journalUnsub=null;
-function startJournal(db){journalCol=db.collection('trips');
- journalUnsub=journalCol.where('kind','==','journal').onSnapshot(s=>{journal=s.docs.map(d=>({_id:d.id,...d.data()}));renderJournal()},e=>{$('jStatus')&&($('jStatus').textContent='⚠️ Journal sync error: '+e.message)})}
+function startJournal(db){journalCol=db.collection('trips').doc('japan-2027').collection('journal');
+ journalUnsub=journalCol.onSnapshot(s=>{journal=s.docs.map(d=>({_id:d.id,...d.data()}));$('jStatus')&&($('jStatus').textContent='');renderJournal()},
+ e=>{const el=$('jStatus');if(el)el.textContent=e.code==='permission-denied'?'📔 The journal is waiting on a one-time Firebase setting, so entries can\'t be saved yet.':'⚠️ Journal couldn\'t load: '+e.message})}
 function shrinkPhoto(file){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>{let w=img.width,h=img.height,m=1100;if(w>m||h>m){const r=Math.min(m/w,m/h);w=Math.round(w*r);h=Math.round(h*r)}
  const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);let q=.72,u=c.toDataURL('image/jpeg',q);while(u.length>700000&&q>.35){q-=.1;u=c.toDataURL('image/jpeg',q)}URL.revokeObjectURL(img.src);res(u)};img.onerror=rej;img.src=URL.createObjectURL(file)})}
 function renderJournal(){const box=$('jList');if(!box)return;if(typeof renderHome==='function'&&navReady)renderHome();
