@@ -51,6 +51,8 @@ textarea.bk{width:100%}.phr{border-top:1px solid var(--line);padding:8px 0}.phr 
 label.fl{display:block;font-size:.9em;color:var(--mut);margin:6px 0}label.fl input,label.fl select,label.fl textarea{display:block;width:100%;margin:2px 0 0;font-size:16px}
 #driver{position:fixed;inset:0;background:#fff;color:#000;z-index:4000;display:none;padding:70px 24px 24px;overflow:auto}#driver.on{display:block}
 #installTip{display:none}
+#lodgingTable,#souvBox,#expList,#sakuraBox{overflow-x:auto;max-width:100%}
+.wx{font-weight:600}.chk.late strong{color:#c62828}.doneRow td{color:var(--mut);text-decoration:line-through}.doneRow td:first-child{text-decoration:none}
 </style></head><body>
 <header><h1>🌸 Japan Trip Planner</h1><p id="countdown"></p><p>March 19–28, 2027 · 4 travelers · Cherry blossoms &amp; Mount Fuji</p><p>Tokyo → Kawaguchiko → Kyoto → Nara / Osaka · No car — trains &amp; transit</p></header>
 <div id="syncBar" class="small" style="padding:6px 16px;background:var(--card);border-bottom:1px solid var(--line)"><span id="sync">…</span></div>
@@ -87,13 +89,14 @@ label.fl{display:block;font-size:.9em;color:var(--mut);margin:6px 0}label.fl inp
 <h3>Yen → Dollar converter</h3><p>Reference rate (Nov 4, 2026, Frankfurter): ¥<span id="rate">158.27</span> = $1</p><input id="yenIn" type="number" placeholder="¥ amount"> = <strong id="usdOut">$0.00</strong>
 <h3>Lodging plan</h3><div id="lodgingTable"></div>
 <h3>Daily assumptions</h3><p>Per person per day — Breakfast (konbini): <input id="dB" type="number" value="500"> Meals: <input id="dM" type="number" value="4000"> Transit: <input id="dT" type="number" value="1200"> Flight per person (USD): <input id="fPP" type="number" value="2082"> <button class="btn" id="recalc">Recalculate</button></p>
+<h3>🎁 Souvenir list</h3><div id="souvBox"></div>
 <h3>Spending tracker</h3><form id="expForm"><input name="label" required placeholder="What did you spend on?"><input name="amount_yen" required type="number" min="0" placeholder="¥ amount"><button class="btn">Add expense</button></form><div id="expList"></div>
 </section>
 
 <section id="bookings"><h2>Booking deadlines</h2><div id="reminders"></div></section>
 
 <section id="prep"><h2>Prep</h2>
-<div class="day"><h3>🌸 Sakura forecast watch</h3><p>Status (checked Nov 4, 2026): No genuine 2027 forecast is available yet. Dates currently circulating are JMA 1991–2020 averages / historical estimates. First real forecasts are expected mid-December 2026 to late January 2027.</p></div>
+<div class="day"><h3>🌸 Sakura forecast watch</h3><p>Status (checked Nov 4, 2026): No genuine 2027 forecast is available yet. Dates currently circulating are JMA 1991–2020 averages / historical estimates. First real forecasts are expected mid-December 2026 to late January 2027. When they come out (e.g. Weathernews or Japan Meteorological Corporation), enter each city's dates below. The Today and Itinerary tabs will then show bloom status for every day.</p><div id="sakuraBox"></div></div>
 <div class="day"><h3>✅ Before-we-go checklist</h3><div id="taskBox"></div></div>
 <div class="day"><h3>🎒 Packing &amp; daily carry checklists</h3><div id="checks"></div><button class="btn" id="resetChecks">Reset daily carry</button></div>
 </section>
@@ -150,15 +153,16 @@ const reminders=[
 ["2027-02-20","Arashiyama guided tour","Operator is not confirmed. Pick one, then verify cancellation and meeting-point policy."],
 ["2027-02-25","Gion night tour","Operator is not confirmed. Book 2–4 weeks ahead for late-March demand."],
 ["2027-02-26","Kaiyukan timed entry","E-tickets are released 30 days ahead; choose a Mar 28 entry slot."],
-["2027-03-05","SHIBUYA SKY sunset ticket","Sales open 14 days ahead at 00:00 JST. Mar 19 slots open Mar 5."]];
+["2027-03-05","SHIBUYA SKY sunset ticket","Sales open 14 days ahead at 00:00 JST. Mar 19 slots open Mar 5.","2027-03-05T00:00"],
+["2027-02-23","Fuji Excursion seats go on sale","Seats for the Mar 23 Shinjuku → Kawaguchiko train open 1 month ahead and sell out fast — book right when they open.","2027-02-23T10:00"]];
 const checkItems=["Passport / ID","Phone + charger","IC card / transit app ready","Cash (yen) + card","Comfortable walking shoes","Light jacket for cool mornings","Umbrella / rain layer","Portable battery","Translation app downloaded","Camera / phone storage cleared","Medications","Hotel address saved offline","Train app / maps downloaded","Snacks / konbini stop planned","Day bag packed","Tickets / reservations screenshotted","Laundry / outfit for tomorrow"];
 
 const store={get(k,d){try{const v=localStorage.getItem('jtp-'+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem('jtp-'+k,JSON.stringify(v))}catch(e){}}};
 const SEEDQ=Object.fromEntries(ideas.map(i=>[i.id,i.photo_q]));const withQ=l=>l.map(i=>{if(!SEEDQ[i.id])return i;const x=SEED_EXTRA[i.id]||{};return {...i,photo_q:i.photo_q||SEEDQ[i.id],hours:i.hours??x.hours??'',closed:i.closed??x.closed??''}});
 ideas=withQ(store.get('ideas',ideas)); let expenses=store.get('expenses',[]); let doneR=store.get('reminders',{}); let doneC=store.get('checks',{});
-travelers=store.get('travelers',[]);votes=store.get('votes',{});hotels=store.get('hotels',SEED_HOTELS);legs=store.get('legs',SEED_LEGS);backups=store.get('backups',{});tasks=store.get('tasks',SEED_TASKS);contacts=store.get('contacts',[]);
+travelers=store.get('travelers',[]);flights=store.get('flights',SEED_FLIGHTS);sakura=store.get('sakura',{});souvenirs=store.get('souvenirs',[]);votes=store.get('votes',{});hotels=store.get('hotels',SEED_HOTELS);legs=store.get('legs',SEED_LEGS);backups=store.get('backups',{});tasks=store.get('tasks',SEED_TASKS);contacts=store.get('contacts',[]);
 let tripDoc=null;
-function save(){const all={ideas,expenses,reminders:doneR,checks:doneC,travelers,votes,hotels,legs,backups,tasks,contacts};
+function save(){const all={ideas,expenses,reminders:doneR,checks:doneC,travelers,votes,hotels,legs,backups,tasks,contacts,flights,sakura,souvenirs};
  Object.entries(all).forEach(([k,v])=>store.set(k,v));
  if(tripDoc)tripDoc.set({...all,updated:Date.now()}).catch(e=>setSync('⚠️ Save failed: '+e.message))}
 function setSync(t){const el=document.getElementById('sync');if(el)el.textContent=t}
@@ -173,9 +177,9 @@ function startSync(){
   tripDoc.onSnapshot(snap=>{
    if(!snap.exists){if(snap.metadata.fromCache){setSync('📴 Offline — showing the copy saved on this phone');return}if(first){first=false;save()}return}
    first=false;const d=snap.data();ideas=withQ(d.ideas||[]);expenses=d.expenses||[];doneR=d.reminders||{};doneC=d.checks||{};
-   travelers=d.travelers||[];votes=d.votes||{};hotels=d.hotels||SEED_HOTELS;legs=d.legs||SEED_LEGS;backups=d.backups||{};tasks=d.tasks||SEED_TASKS;contacts=d.contacts||[];
-   const missing=!d.hotels||!d.legs||!d.tasks;
-   Object.entries({ideas,expenses,travelers,votes,hotels,legs,backups,tasks,contacts}).forEach(([k,v])=>store.set(k,v));
+   travelers=d.travelers||[];votes=d.votes||{};hotels=d.hotels||SEED_HOTELS;legs=d.legs||SEED_LEGS;backups=d.backups||{};tasks=d.tasks||SEED_TASKS;contacts=d.contacts||[];flights=d.flights||SEED_FLIGHTS;sakura=d.sakura||{};souvenirs=d.souvenirs||[];
+   const missing=!d.hotels||!d.legs||!d.tasks||!d.flights;
+   Object.entries({ideas,expenses,travelers,votes,hotels,legs,backups,tasks,contacts,flights,sakura,souvenirs}).forEach(([k,v])=>store.set(k,v));
    filters();render();setSync(snap.metadata.fromCache?'📴 Offline — changes will sync when you\'re back online':'🟢 Shared — everyone sees the same plan');
    if(missing&&!snap.metadata.fromCache)save(); // first time with the new features: add the starter trains/hotels/tasks
   },e=>setSync('⚠️ Sync error: '+e.message));
@@ -219,7 +223,7 @@ function renderBudget(){
  const daily=(Number($('dB').value)+Number($('dM').value)+Number($('dT').value))*4*10, flights=Number($('fPP').value)*4, ideascost=ideas.reduce((s,i)=>s+Number(i.estimated_cost_yen||0),0)*4;
  $('bLodging').textContent=YEN(lod); $('bDaily').textContent=YEN(daily); $('bFlights').textContent=USD(flights); $('bIdeas').textContent=YEN(ideascost);
 }
-function renderReminders(){$('reminders').innerHTML=reminders.map((r,ix)=>`<label class="chk"><input type="checkbox" ${doneR[ix]?'checked':''} onchange="doneR[${ix}]=this.checked;save()"> <strong>${r[0]}</strong> — ${r[1]}<br><span class="small">${r[2]}</span></label>`).join('')}
+function renderReminders(){renderRemindersX()}
 function renderChecks(){$('checks').innerHTML=checkItems.map((c,ix)=>`<label class="chk"><input type="checkbox" ${doneC[ix]?'checked':''} onchange="doneC[${ix}]=this.checked;save()"> ${c}</label>`).join('')}
 function renderExpenses(){$('expList').innerHTML=expenses.length?('<table><tr><th>Item</th><th>¥</th><th>$</th></tr>'+expenses.map(e=>`<tr><td>${esc(e.label)}</td><td>${YEN(e.amount_yen)}</td><td>${USD(e.amount_yen/RATE)}</td></tr>`).join('')+`<tr><th>Total</th><th>${YEN(expenses.reduce((s,e)=>s+Number(e.amount_yen),0))}</th><th>${USD(expenses.reduce((s,e)=>s+Number(e.amount_yen),0)/RATE)}</th></tr></table>`):'<p class="small">No expenses recorded yet.</p>'}
 let mapDone=false,mapObj=null,pinLayer=null; function initMap(){if(mapDone||!window.L)return; mapDone=true; const m=mapObj=L.map('map').setView([36.2,138.25],6); const en=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles © Esri',maxZoom:19}),

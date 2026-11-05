@@ -103,25 +103,26 @@ function renderCountdown(){const t=todayISO(),el=$('countdown');if(!el)return;
 
 // ---- TODAY ----
 window.setViewDay=d=>{viewDay=d;renderToday()};
-function legCard(l){return `<div class="leg"><strong>🚆 ${esc(l.from)} → ${esc(l.to)}</strong>${l.time?` · ${esc(l.time)}`:''}${l.booked?' <span class="badge ok">✓ booked</span>':''}<br><span class="small">${esc(l.how)}</span>${l.fare?`<br><span class="small">${YEN(l.fare)} / person</span>`:''}${l.reserve?`<br><span class="small">🎫 ${esc(l.reserve)}</span>`:''}${l.luggage?`<br><span class="small">🧳 ${esc(l.luggage)}</span>`:''}</div>`}
+function legCard(l){const fl=l.id==='l1'&&typeof flights!=='undefined'&&flights[0]&&flights[0].to?flights[0].to+' airport':l.from;return `<div class="leg"><strong>🚆 ${esc(fl)} → ${esc(l.to)}</strong>${l.time?` · ${esc(l.time)}`:''}${l.booked?' <span class="badge ok">✓ booked</span>':''}<br><span class="small">${esc(l.how)}</span>${l.fare?`<br><span class="small">${YEN(l.fare)} / person</span>`:''}${l.reserve?`<br><span class="small">🎫 ${esc(l.reserve)}</span>`:''}${l.luggage?`<br><span class="small">🧳 ${esc(l.luggage)}</span>`:''}</div>`}
 function renderToday(){const box=$('todayBox');if(!box)return;const t=todayISO();
  const d=viewDay||(t>=TRIP_START&&t<=TRIP_END?t:TRIP_START);
  const n=dayNum(d),h=hotelFor(d),dayIdeas=ideas.filter(i=>i.trip_date===d),dayLegs=legs.filter(l=>l.date===d).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
  let top='';if(t<TRIP_START&&!viewDay)top=`<p class="small">The trip hasn't started yet, so this is a preview of Day 1. During the trip this page opens on the current day automatically.</p>`;
  box.innerHTML=`<div class="chips">${TRIP_DATES.map(x=>`<button class="chip ${x===d?'on':''}" onclick="setViewDay('${x}')">${dayNum(x)}<small>${fmtDay(x).replace(',','<br>')}</small></button>`).join('')}</div>${top}
- <h2 style="margin:10px 0 2px">Day ${n} · ${fmtDay(d)}</h2>${HOLIDAYS[d]?`<p class="small">${HOLIDAYS[d]}</p>`:''}
+ <h2 style="margin:10px 0 2px">Day ${n} · ${fmtDay(d)}</h2><p style="margin:2px 0">${wxLine(d)}</p>${sakuraLine(d)?`<p style="margin:2px 0">${sakuraLine(d)}</p>`:''}${HOLIDAYS[d]?`<p class="small">${HOLIDAYS[d]}</p>`:''}
+ ${flightsOn(d).length?`<div class="day"><h3>✈️ Flights today</h3>${flightsOn(d).map(f=>flightCard(f,false)).join('')}</div>`:(d===TRIP_START||d===TRIP_END)&&!flights.some(f=>f.number)?`<div class="day"><h3>✈️ Flights</h3><p class="small">No flight details yet — <a href="#" onclick="goTab('travel');return false">add them on Getting Around</a>.</p></div>`:''}
  <div class="day"><h3>🏨 ${d===TRIP_END?'Flying home today':'Tonight\'s hotel'}</h3>${d===TRIP_END?'<p>Check out, then head to the airport — trains are below.</p>':h?hotelBlock(h,true):'<p class="small">No hotel set for this night.</p>'}</div>
  <div class="day"><h3>🚆 Trains today</h3>${dayLegs.length?dayLegs.map(legCard).join(''):'<p class="small">No train legs today — just local subway/bus with your IC card.</p>'}</div>
  <div class="day"><h3>🗺️ The plan</h3>${dayIdeas.length?dayIdeas.map(i=>`<div class="leg"><strong>${SHAPE[i.category]||'●'} ${esc(i.title)}</strong>${i.priority==='must-do'?' <span class="badge must">★</span>':''}<br><span class="small">${esc(i.city)}${i.hours?' · 🕘 '+esc(i.hours):''}${i.estimated_cost_yen?' · '+YEN(i.estimated_cost_yen)+'/person':''}</span>${closedWarn(i,d)}<br><a href="${mapsHref(i.place_label||i.title+' '+i.city)}" target="_blank" rel="noopener">Directions</a>${i.website_url?` · <a href="${esc(i.website_url)}" target="_blank" rel="noopener">Website</a>`:''}</div>`).join(''):'<p class="small">Nothing planned yet — add ideas with this date on the Ideas tab.</p>'}</div>
  <div class="day"><h3>☔ Rainy-day backup</h3><p>${backups[d]?esc(backups[d]).replace(/\n/g,'<br>'):'<span class="small">None set — add one on the Itinerary tab.</span>'}</p></div>
- <div class="sosrow"><a class="btn danger" href="tel:110">🚓 110 Police</a><a class="btn danger" href="tel:119">🚑 119 Ambulance</a><a class="btn" href="#" onclick="goTab('sos');return false">🆘 More help</a></div>`;}
+ <div class="sosrow"><a class="btn danger" href="tel:110">🚓 110 Police</a><a class="btn danger" href="tel:119">🚑 119 Ambulance</a><a class="btn" href="#" onclick="goTab('sos');return false">🆘 More help</a></div>${tzCard(d)}`;wireTZ(d);}
 window.goTab=id=>{const b=document.querySelector(`nav button[data-tab="${id}"]`);if(b)b.click()};
 
 // ---- ITINERARY (day by day + backups) ----
 function renderItinerary(){const box=$('days');if(!box)return;
  const undated=ideas.filter(i=>!i.trip_date||!TRIP_DATES.includes(i.trip_date));
  box.innerHTML=TRIP_DATES.map(d=>{const arr=ideas.filter(i=>i.trip_date===d),ls=legs.filter(l=>l.date===d),h=hotelFor(d);
-  return `<div class="day"><h3 style="margin-bottom:2px">Day ${dayNum(d)} · ${fmtDay(d)}</h3><p class="small" style="margin-top:0">${h?'🏨 '+esc(h.stop)+(h.name?' — '+esc(h.name):''):d===TRIP_END?'✈️ Fly home':''}${HOLIDAYS[d]?'<br>'+HOLIDAYS[d]:''}</p>
+  return `<div class="day"><h3 style="margin-bottom:2px">Day ${dayNum(d)} · ${fmtDay(d)}</h3><p style="margin:2px 0">${wxLine(d)}${sakuraLine(d)?'<br>'+sakuraLine(d):''}</p>${flightsOn(d).map(f=>`<p>✈️ <strong>${esc(f.from)} → ${esc(f.to)}</strong> ${esc(f.airline)} ${esc(f.number)}</p>`).join('')}<p class="small" style="margin-top:0">${h?'🏨 '+esc(h.stop)+(h.name?' — '+esc(h.name):''):d===TRIP_END?'✈️ Fly home':''}${HOLIDAYS[d]?'<br>'+HOLIDAYS[d]:''}</p>
   ${ls.map(l=>`<p>🚆 <strong>${esc(l.from)} → ${esc(l.to)}</strong> <span class="small">${esc(l.how)}</span></p>`).join('')}
   ${arr.map(i=>`<p>${SHAPE[i.category]||'●'} <strong>${esc(i.title)}</strong> — ${esc(i.city)} · ${YEN(i.estimated_cost_yen||0)}${i.priority==='must-do'?' · ★ Must-do':''}${voteNames(i.id).length?' · 👍 '+voteNames(i.id).length:''}${i.hours?' <span class="small">🕘 '+esc(i.hours)+'</span>':''}</p>${closedWarn(i,d)}`).join('')||'<p class="small">Nothing planned yet.</p>'}
   <label class="small">☔ Rainy-day backup<br><textarea class="bk" data-d="${d}" rows="2" placeholder="Indoor plan if it rains or Fuji is hidden…">${esc(backups[d]||'')}</textarea></label></div>`}).join('')
@@ -132,7 +133,7 @@ function renderItinerary(){const box=$('days');if(!box)return;
 function renderTravel(){const box=$('travelBox');if(!box)return;
  const per=legs.reduce((s,l)=>s+Number(l.fare||0),0),jr=legs.filter(l=>l.jr!=='Not JR').reduce((s,l)=>s+Number(l.fare||0),0);
  const worth=jr>JR_PASS_OFFICIAL;
- box.innerHTML=`<div class="day"><h3>🎫 Is a JR Pass worth it?</h3>
+ box.innerHTML=`<div class="day"><h3>✈️ Flights</h3>${flights.map(f=>flightCard(f,true)).join('')}<button class="btn" onclick="editFlight()">➕ Add a connecting flight</button></div><div class="day"><h3>🎫 Is a JR Pass worth it?</h3>
  <div class="stats"><div class="stat"><b>${YEN(per)}</b>Train fares listed below, per person</div><div class="stat"><b>${YEN(jr)}</b>Of that on JR lines (roughly)</div><div class="stat"><b>${YEN(JR_PASS_OFFICIAL)}</b>7-day JR Pass (official site)</div></div>
  <p>${worth?'✅ Your JR fares are above the pass price — the pass could pay off. Double-check the dates fit in 7 days.':'❌ <strong>Not worth it for this route.</strong> Buy tickets leg by leg and use IC cards (Suica/PASMO) for local rides.'}</p>
  <p class="small">The 7-day pass is ¥50,000 on the official JR Pass site and ¥53,000 through overseas agents since Oct 1, 2026. It doesn't cover the Fujikyu part of the Fuji Excursion, Kintetsu, Nankai, or buses. Fill in the "not decided" leg to make this more accurate.</p></div>
@@ -176,7 +177,7 @@ function renderSOS(){const box=$('sosBox');if(!box)return;
  <p><a href="tel:+81332245000">🇺🇸 US Embassy Tokyo: 03-3224-5000</a><br><a href="tel:+81663155900">🇺🇸 US Consulate Osaka-Kobe: 06-6315-5900</a> — lost passport or serious trouble</p>
  <p class="small">110 and 119 work from any phone, even without a Japanese SIM.</p></div>
  <div class="day"><h3>🗣️ Phrases for emergencies</h3><div class="phr"><div class="ja">助けてください</div><span class="small"><em>Tasukete kudasai</em> — Please help</span></div><div class="phr"><div class="ja">救急車をお願いします</div><span class="small"><em>Kyūkyūsha o onegai shimasu</em> — Please call an ambulance</span></div><div class="phr"><div class="ja">病院はどこですか？</div><span class="small"><em>Byōin wa doko desu ka?</em> — Where is the hospital?</span></div><div class="phr"><div class="ja">道に迷いました</div><span class="small"><em>Michi ni mayoimashita</em> — We\'re lost</span></div><div class="phr"><div class="ja">英語を話せる人はいますか？</div><span class="small"><em>Eigo o hanaseru hito wa imasu ka?</em> — Does anyone speak English?</span></div></div>
- <h2>🏨 Hotels</h2><p class="small">Fill in each hotel's Japanese name and address once booked (copy them from the booking confirmation or Google Maps in Japanese). Then "Show to driver" puts it on screen in big text for a taxi driver or anyone you ask for directions.</p>
+ ${phrasesCard()}${tzCard()}<h2>🏨 Hotels</h2><p class="small">Fill in each hotel's Japanese name and address once booked (copy them from the booking confirmation or Google Maps in Japanese). Then "Show to driver" puts it on screen in big text for a taxi driver or anyone you ask for directions.</p>
  ${hotels.map(h=>`<div class="day"><h3 style="margin-bottom:2px">${esc(h.stop)}</h3>${hotelBlock(h,false)}</div>`).join('')}
  <div class="day"><h3>📇 Group contacts</h3>${contacts.length?contacts.map((c,ix)=>`<p><strong>${esc(c.name)}</strong>${c.note?' <span class="small">('+esc(c.note)+')</span>':''} — ${c.phone?`<a href="${telHref(c.phone)}">${esc(c.phone)}</a>`:''} · <a href="#" onclick="editContact(${ix});return false">Edit</a></p>`).join(''):'<p class="small">Add everyone\'s phone numbers, plus anyone back home to call.</p>'}<button class="btn" onclick="editContact()">➕ Add contact</button></div>`;}
 
@@ -213,4 +214,111 @@ function initJournalForm(){const f=$('jForm');if(!f)return;const t=todayISO();f.
   catch(err){alert('Could not save: '+err.message)}
   btn.disabled=false;btn.textContent='Add entry'}}
 
-function renderExtras(){renderCountdown();renderMeBtn();renderToday();renderItinerary();renderTravel();renderSOS();renderTasks()}
+
+
+// ===================== Round 2: flights, calendar, weather, sakura, time, souvenirs, phrases =====================
+const SEED_FLIGHTS=[
+ {id:'f1',dir:'Outbound',airline:'',number:'',from:'RDU',to:'',depart:'',arrive:'',confirmation:'',notes:''},
+ {id:'f2',dir:'Return',airline:'',number:'',from:'KIX',to:'RDU',depart:'',arrive:'',confirmation:'',notes:''}];
+const SAKURA_CITIES=['Tokyo','Kawaguchiko','Kyoto','Nara','Osaka'];
+let flights=SEED_FLIGHTS,sakura={},souvenirs=[];
+const HOME_TZ='America/New_York',JP_TZ='Asia/Tokyo';
+
+// ---- helpers ----
+function addDays(iso,n){const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return isoOf(d)}
+function fmtTZ(date,tz,opts){return date.toLocaleString('en-US',{timeZone:tz,...opts})}
+function jstToLocal(jst){return fmtTZ(new Date(jst+':00+09:00'),HOME_TZ,{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}
+function fmtDT(v){if(!v)return'';const [d,t]=v.split('T');return fmtDay(d)+(t?' · '+new Date('2000-01-01T'+t).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'')}
+
+// ---- FLIGHTS ----
+function flightCard(f,withEdit){const filled=f.number||f.depart;
+ return `<div class="leg"><strong>✈️ ${esc(f.dir)}: ${esc(f.from||'?')} → ${esc(f.to||'?')}</strong>${f.airline||f.number?` · ${esc(f.airline)} ${esc(f.number)}`:''}<br>
+ ${filled?`<span class="small">Departs ${esc(fmtDT(f.depart))||'?'} · Arrives ${esc(fmtDT(f.arrive))||'?'} (local times)</span>`:'<span class="small">Not filled in yet.</span>'}
+ ${f.confirmation?`<br><span class="small">Confirmation: <strong>${esc(f.confirmation)}</strong></span>`:''}${f.notes?`<br><span class="small">${esc(f.notes)}</span>`:''}
+ ${f.number?`<br><a href="https://www.flightaware.com/live/flight/${encodeURIComponent((f.number||'').replace(/\s/g,''))}" target="_blank" rel="noopener">Flight status</a>`:''}${withEdit?`${f.number?' · ':'<br>'}<a href="#" onclick="editFlight('${f.id}');return false">Edit</a>`:''}</div>`}
+window.editFlight=id=>{const f=id?flights.find(x=>x.id===id):{id:'f'+Date.now(),dir:'Connection',airline:'',number:'',from:'',to:'',depart:'',arrive:'',confirmation:'',notes:''};
+ openForm(id?'Flight — '+f.dir:'Add a flight',[['dir','Which flight','select',['Outbound','Connection','Return']],['airline','Airline'],['number','Flight number (e.g. AA 175)'],['from','From airport (e.g. RDU)'],['to','To airport (e.g. HND or NRT)'],['depart','Departs (local time there)','datetime-local'],['arrive','Arrives (local time there)','datetime-local'],['confirmation','Confirmation code'],['notes','Notes (seats, bags, terminal…)','textarea']],f,
+ o=>{o.from=o.from.toUpperCase();o.to=o.to.toUpperCase();if(id)Object.assign(f,o);else flights.push(o);save();render()},id&&!['f1','f2'].includes(id)?()=>{flights=flights.filter(x=>x.id!==id);save();render()}:null)};
+function flightsOn(d){return flights.filter(f=>(f.depart||'').slice(0,10)===d||(f.arrive||'').slice(0,10)===d)}
+
+// ---- CALENDAR (.ics) ----
+function icsEsc(s){return String(s||'').replace(/\\/g,'\\\\').replace(/;/g,'\;').replace(/,/g,'\\,').replace(/\n/g,'\\n')}
+function icsEvent(r,ix){const [date,title,desc,jst]=r,stamp=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
+ const L=['BEGIN:VEVENT','UID:jtp-deadline-'+ix+'@mryoff.github.io','DTSTAMP:'+stamp,'SUMMARY:'+icsEsc('🌸 Japan trip: '+title)];
+ if(jst){const s=new Date(jst+':00+09:00'),e=new Date(s.getTime()+30*60000),f=d=>d.toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
+  L.push('DTSTART:'+f(s),'DTEND:'+f(e),'DESCRIPTION:'+icsEsc(desc+'\nOpens '+jst.replace('T',' ')+' Japan time.\nhttps://mryoff.github.io/Japan-Trip/'),
+   'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+icsEsc(title),'TRIGGER:-P1D','END:VALARM','BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+icsEsc(title),'TRIGGER:-PT30M','END:VALARM')}
+ else{const d=date.replace(/-/g,''),n=addDays(date,1).replace(/-/g,'');
+  L.push('DTSTART;VALUE=DATE:'+d,'DTEND;VALUE=DATE:'+n,'DESCRIPTION:'+icsEsc(desc+'\nhttps://mryoff.github.io/Japan-Trip/'),
+   'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+icsEsc(title),'TRIGGER:-PT15H','END:VALARM','BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+icsEsc(title),'TRIGGER:PT9H','END:VALARM')}
+ L.push('END:VEVENT');return L.join('\r\n')}
+function downloadICS(list,name){const body=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Japan Trip Planner//EN','CALSCALE:GREGORIAN','X-WR-CALNAME:Japan Trip deadlines',...list.map(([r,ix])=>icsEvent(r,ix)),'END:VCALENDAR'].join('\r\n');
+ const url=URL.createObjectURL(new Blob([body],{type:'text/calendar;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove()},2000)}
+window.calAll=()=>{const today=todayISO(),list=reminders.map((r,ix)=>[r,ix]).filter(([r,ix])=>!doneR[ix]&&r[0]>=today);if(!list.length)return alert('No upcoming deadlines left to add.');downloadICS(list,'japan-trip-deadlines.ics')};
+window.calOne=ix=>downloadICS([[reminders[ix],ix]],'japan-trip-deadline.ics');
+function renderRemindersX(){const box=$('reminders');if(!box)return;const today=todayISO();
+ box.innerHTML=`<p><button class="btn primary" onclick="calAll()">📅 Add all upcoming deadlines to my calendar</button></p><p class="small">Downloads a calendar file. On iPhone, tap "Add All". Each one reminds you the day before and the day of. Already-checked items are skipped.</p>`+
+ reminders.map((r,ix)=>[r,ix]).sort((a,b)=>(a[0][3]||a[0][0]).localeCompare(b[0][3]||b[0][0])).map(([r,ix])=>`<label class="chk ${r[0]<today&&!doneR[ix]?'late':''}"><input type="checkbox" ${doneR[ix]?'checked':''} onchange="doneR[${ix}]=this.checked;save()"> <strong>${fmtDay(r[0])}</strong> — ${esc(r[1])} <a href="#" class="small" onclick="calOne(${ix});return false" title="Add to calendar">📅</a><br><span class="small">${esc(r[2])}${r[3]?`<br>⏰ Opens ${r[3].slice(11)} Japan time = <strong>${jstToLocal(r[3])}</strong> Eastern`:''}</span></label>`).join('')}
+
+// ---- WEATHER (Open-Meteo, free, no key) ----
+const CITY_COORDS={Tokyo:[35.68,139.69],Kawaguchiko:[35.50,138.76],Kyoto:[35.01,135.77],Nara:[34.68,135.80],Osaka:[34.69,135.50]};
+function cityFor(d){const c=ideas.filter(i=>i.trip_date===d).map(i=>i.city).find(c=>CITY_COORDS[c]);if(c)return c;const h=hotelFor(d);
+ if(!h)return 'Osaka';return CITY_COORDS[h.stop]?h.stop:(h.stop.startsWith('Nara')?'Nara':'Osaka')}
+let wx={};try{wx=JSON.parse(localStorage.getItem('jtp-wx')||'{}')}catch(e){}
+let wxStarted=false;
+async function fetchWeather(){if(wxStarted)return;wxStarted=true;const t=todayISO();
+ if(addDays(t,15)<TRIP_START||t>TRIP_END)return; // forecasts only reach ~16 days out
+ const cities=[...new Set(TRIP_DATES.map(cityFor))];let changed=false;
+ for(const c of cities){if(wx[c]&&Date.now()-wx[c].t<3*3600e3)continue;const [la,lo]=CITY_COORDS[c];
+  try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,cloud_cover_mean&temperature_unit=fahrenheit&timezone=Asia%2FTokyo&forecast_days=16`);
+   const j=await r.json();if(j.daily){wx[c]={t:Date.now(),d:j.daily};changed=true}}catch(e){}}
+ if(changed){try{localStorage.setItem('jtp-wx',JSON.stringify(wx))}catch(e){}renderToday();renderItinerary()}}
+function wxEmoji(c){return c===0?'☀️':c<=2?'🌤️':c===3?'☁️':c<=48?'🌫️':c<=67?'🌧️':c<=77?'🌨️':c<=82?'🌦️':'⛈️'}
+function wxLine(d){const c=cityFor(d),w=wx[c]&&wx[c].d,i=w?w.time.indexOf(d):-1;
+ if(i>=0){const cc=w.cloud_cover_mean?w.cloud_cover_mean[i]:null;
+  return `<span class="wx">${wxEmoji(w.weather_code[i])} ${Math.round(w.temperature_2m_max[i])}° / ${Math.round(w.temperature_2m_min[i])}°F · 💧${w.precipitation_probability_max[i]??'?'}% rain <span class="small">(${c})</span>${c==='Kawaguchiko'&&cc!=null?` · 🗻 Fuji ${cc<40?'likely visible':cc<70?'maybe visible — go early':'probably hidden by clouds'}`:''}</span>`}
+ if(todayISO()>TRIP_END)return'';
+ return `<span class="small">🌤️ Forecast for ${c} shows up around ${fmtDay(addDays(d,-15))}</span>`}
+
+// ---- SAKURA TRACKER ----
+function bloomStatus(city,d){const s=sakura[city];if(!s||!s.bloom)return null;const full=s.full||addDays(s.bloom,7);
+ if(d<s.bloom){const n=Math.round((new Date(s.bloom+'T12:00:00')-new Date(d+'T12:00:00'))/864e5);return {e:'🌱',t:`Buds — first bloom in ~${n} day${n===1?'':'s'}`}}
+ if(d<full)return {e:'🌸',t:'Blooming (not full yet)'};if(d<=addDays(full,6))return {e:'🌸🌸',t:'Full bloom'};return {e:'🍃',t:'Petals falling'}}
+function sakuraLine(d){const c=cityFor(d),b=bloomStatus(c,d);return b?`<span class="small">${b.e} ${c}: ${b.t}</span>`:''}
+window.editSakura=c=>{const s=sakura[c]||{bloom:'',full:'',source:''};
+ openForm('Cherry blossom forecast — '+c,[['bloom','First bloom (kaika) date','date'],['full','Full bloom (mankai) date — leave blank to assume ~1 week later','date'],['source','Where this came from (e.g. Weathernews, Dec 10)']],s,
+ o=>{sakura[c]={...o,updated:todayISO()};save();render()})};
+function renderSakura(){const box=$('sakuraBox');if(!box)return;
+ box.innerHTML=`<table><tr><th>City</th><th>First bloom</th><th>Full bloom</th><th></th></tr>${SAKURA_CITIES.map(c=>{const s=sakura[c]||{};return `<tr><td>${c}</td><td>${s.bloom?fmtDay(s.bloom):'—'}</td><td>${s.full?fmtDay(s.full):s.bloom?'~'+fmtDay(addDays(s.bloom,7)):'—'}</td><td><a href="#" onclick="editSakura('${c}');return false">Edit</a>${s.source?`<br><span class="small">${esc(s.source)}</span>`:''}</td></tr>`}).join('')}</table>
+ <h4 style="margin-bottom:4px">Your days</h4><div class="chips">${TRIP_DATES.map(d=>{const c=cityFor(d),b=bloomStatus(c,d);return `<div class="chip" style="cursor:default" title="${b?b.t:'No forecast yet'}">${b?b.e:'❔'}<small>Day ${dayNum(d)}<br>${c}</small></div>`}).join('')}</div>
+ <p class="small">Full bloom usually lasts about a week. Kawaguchiko typically blooms about a week after Tokyo.</p>`}
+
+// ---- TIME ZONES ----
+function renderClock(){document.querySelectorAll('.clock').forEach(el=>{const n=new Date();
+ el.innerHTML=`🇯🇵 Japan: <strong>${fmtTZ(n,JP_TZ,{weekday:'short',hour:'numeric',minute:'2-digit'})}</strong> · 🏠 Home: <strong>${fmtTZ(n,HOME_TZ,{weekday:'short',hour:'numeric',minute:'2-digit'})}</strong>`})}
+setInterval(renderClock,30000);
+function tzOffset(tz,date){return (new Date(date.toLocaleString('en-US',{timeZone:tz}))-new Date(date.toLocaleString('en-US',{timeZone:'UTC'})))/36e5}
+function tzCard(d){const at=new Date((d||TRIP_START)+'T12:00:00+09:00'),diff=tzOffset(JP_TZ,at)-tzOffset(HOME_TZ,at);
+ return `<div class="day"><h3>🕐 Japan ↔ Home</h3><p class="clock"></p><p class="small">During the trip Japan is <strong>${diff} hours ahead</strong> of North Carolina (US daylight saving starts Mar 14). Easy time to call home: 7–10 PM in Japan = morning back home.</p>
+ <p>If it's <input type="time" class="tzIn" value="19:00"> in Japan, it's <strong class="tzOut"></strong> at home.</p></div>`}
+function wireTZ(d){document.querySelectorAll('.tzIn').forEach(inp=>{const out=inp.parentNode.querySelector('.tzOut');const f=()=>{if(!inp.value)return;out.textContent=fmtTZ(new Date((d||TRIP_START)+'T'+inp.value+':00+09:00'),HOME_TZ,{weekday:'short',hour:'numeric',minute:'2-digit'})};inp.oninput=f;f()});renderClock()}
+
+// ---- SOUVENIRS ----
+window.editSouv=id=>{const s=id?souvenirs.find(x=>x.id===id):{id:'s'+Date.now(),forWho:'',item:'',where:'',budget:0,buyer:me||'',bought:false};
+ openForm(id?'Edit souvenir':'Add a souvenir',[['forWho','Who it\'s for'],['item','What'],['where','Where to get it'],['budget','Budget (¥)','number'],['buyer','Who\'s buying it','select',['',...travelers]]],s,
+ o=>{if(id)Object.assign(s,o);else souvenirs.push(o);save();render()},id?()=>{souvenirs=souvenirs.filter(x=>x.id!==id);save();render()}:null)};
+window.souvBought=(id,v)=>{const s=souvenirs.find(x=>x.id===id);s.bought=v;save();render()};
+function renderSouv(){const box=$('souvBox');if(!box)return;const tot=souvenirs.reduce((a,s)=>a+Number(s.budget||0),0),done=souvenirs.filter(s=>s.bought).reduce((a,s)=>a+Number(s.budget||0),0);
+ box.innerHTML=(souvenirs.length?`<table><tr><th>✓</th><th>For</th><th>What</th><th>Where</th><th>Budget</th><th></th></tr>${souvenirs.map(s=>`<tr class="${s.bought?'doneRow':''}"><td><input type="checkbox" ${s.bought?'checked':''} onchange="souvBought('${s.id}',this.checked)"></td><td>${esc(s.forWho)}</td><td>${esc(s.item)}${s.buyer?`<br><span class="small">${esc(s.buyer)} buying</span>`:''}</td><td>${esc(s.where)}</td><td>${YEN(s.budget||0)}</td><td><a href="#" onclick="editSouv('${s.id}');return false">Edit</a></td></tr>`).join('')}
+ <tr><th colspan="4">Total budget (bought so far: ${YEN(done)})</th><th>${YEN(tot)}<br><span class="small">≈ ${USD(tot/RATE)}</span></th><th></th></tr></table>`:'<p class="small">Nothing yet — add who you\'re buying for and what.</p>')+
+ `<p><button class="btn" onclick="editSouv()">➕ Add a souvenir</button></p>
+ <div class="warn" style="background:var(--soft);border-color:var(--line);color:var(--ink)"><strong>Tax-free shopping changed on Nov 1, 2026.</strong> At stores with the Tax-Free sign you now pay the full price (including the 10% tax), show your passport, then get the tax refunded when you leave Japan: bring the items and receipts to customs at the airport <em>before</em> check-in. Keep tax-free items unused and in your carry-on, and leave extra time at KIX on Mar 28.</div>`}
+
+// ---- EVERYDAY PHRASES ----
+const PHRASES=[['すみません','Sumimasen','Excuse me / Sorry'],['ありがとうございます','Arigatō gozaimasu','Thank you'],['4人です','Yonin desu','Table for four'],['これをください','Kore o kudasai','This one, please'],['英語のメニューはありますか？','Eigo no menyū wa arimasu ka?','Do you have an English menu?'],['お会計をお願いします','O-kaikei o onegai shimasu','The check, please'],['カードで払えますか？','Kādo de haraemasu ka?','Can I pay by card?'],['トイレはどこですか？','Toire wa doko desu ka?','Where is the bathroom?'],['切符を4枚ください','Kippu o yonmai kudasai','Four tickets, please'],['写真を撮ってもいいですか？','Shashin o tottemo ii desu ka?','May I take a photo?'],['荷物を預かってもらえますか？','Nimotsu o azukatte moraemasu ka?','Can you hold our luggage?'],['この荷物を次のホテルに送りたいです','Kono nimotsu o tsugi no hoteru ni okuritai desu','We want to send this luggage to our next hotel'],['ごちそうさまでした','Gochisōsama deshita','Thank you for the meal (say it when leaving)']];
+window.showBig=ix=>{const p=PHRASES[ix],o=$('driver');o.innerHTML=`<button class="btn" style="position:absolute;top:14px;right:14px" onclick="this.parentNode.classList.remove('on')">✕ Close</button><p style="font-size:44px;font-weight:800;line-height:1.3;margin:0 0 20px">${p[0]}</p><p style="font-size:22px;margin:0 0 8px"><em>${p[1]}</em></p><p style="font-size:18px;color:#555">${p[2]}</p>`;o.classList.add('on')};
+function phrasesCard(){return `<div class="day"><h3>💬 Everyday phrases</h3><p class="small">Tap one to show it in big text.</p>${PHRASES.map((p,ix)=>`<div class="phr" style="cursor:pointer" onclick="showBig(${ix})"><div class="ja">${p[0]}</div><span class="small"><em>${p[1]}</em> — ${p[2]}</span></div>`).join('')}</div>`}
+
+function renderRound2(){renderRemindersX();renderSakura();renderSouv();fetchWeather()}
+
+function renderExtras(){renderCountdown();renderMeBtn();renderToday();renderItinerary();renderTravel();renderSOS();wireTZ();renderTasks();renderRound2()}

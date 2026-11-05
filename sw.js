@@ -1,7 +1,7 @@
 // Offline support for the Japan Trip planner.
 // Page + scripts: network first (so updates show up), cached copy when offline.
 // Libraries, photos and map tiles: cached as you use them.
-const SHELL='jtp-shell-v1', RUNTIME='jtp-runtime-v1', MAX_RUNTIME=400;
+const SHELL='jtp-shell-v2', RUNTIME='jtp-runtime-v1', MAX_RUNTIME=400;
 const SHELL_FILES=['./','./index.html','./app.js','./manifest.json','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png','./icons/favicon-32.png',
  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css','https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
  'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js','https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js'];
@@ -11,7 +11,7 @@ async function trim(){const c=await caches.open(RUNTIME),ks=await c.keys();for(l
 self.addEventListener('fetch',e=>{
  const r=e.request;if(r.method!=='GET')return;const u=new URL(r.url);
  // live data & lookups always go to the network (Firestore handles its own offline copy)
- if(/googleapis\.com|firebaseio|nominatim|frankfurter|wikipedia\.org\/w\/api/.test(u.href))return;
+ if(/googleapis\.com|firebaseio|nominatim|frankfurter|open-meteo|flightaware|wikipedia\.org\/w\/api/.test(u.href))return;
  if(u.origin===location.origin){
   e.respondWith(fetch(r).then(res=>{if(res.ok){const cp=res.clone();caches.open(SHELL).then(c=>c.put(r,cp))}return res})
    .catch(()=>caches.match(r,{ignoreSearch:true}).then(m=>m||caches.match('./index.html'))));return}
