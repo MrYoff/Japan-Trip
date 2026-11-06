@@ -73,7 +73,36 @@ textarea.bk{width:100%}.phr{border-top:1px solid var(--line);padding:10px 0}.phr
 .leg{border-top:1px solid var(--line);padding:10px 0}.leg:first-of-type{border-top:0;padding-top:2px}
 .sosrow{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.ja{font-size:1.15em}
 .task{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line);padding:6px 0}.task label{flex:1}.task.done label{color:var(--mut);text-decoration:line-through}.task select{margin:0;padding:6px;font-size:14px}
-.jentry img{width:100%;max-width:520px;border-radius:14px;display:block;margin:6px 0}
+/* photo book */
+.jbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.jbar input[type=date]{margin:0;flex:1;min-width:140px}.jpick{cursor:pointer}
+.tray{display:flex;gap:8px;overflow-x:auto;padding:12px 4px 6px}.tthumb{position:relative;flex:0 0 auto}.tthumb img{width:72px;height:72px;object-fit:cover;border-radius:10px;display:block}
+.tthumb button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:0;background:#000a;color:#fff;font-size:14px;line-height:22px;padding:0;cursor:pointer}
+#jViews{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}#jViews button{border:0;background:none;color:var(--ink);padding:6px 14px;font:inherit;font-weight:600;cursor:pointer}#jViews button.on{background:var(--blue);color:#fff}
+.book{perspective:1400px}.bpage{background:#fffdf8;color:#2b2420;border-radius:6px 18px 18px 6px;padding:20px 18px 14px;margin:12px 0;min-height:360px;box-shadow:inset 10px 0 14px -10px rgba(60,40,20,.25),0 2px 4px rgba(30,20,10,.08),0 12px 28px rgba(30,20,10,.12);border:1px solid #efe6da}
+[data-theme=dark] .bpage{background:#25212a;color:var(--ink);border-color:var(--line)}
+.flipf .bpage{animation:flipf .35s ease-out;transform-origin:left}.flipb .bpage{animation:flipb .35s ease-out;transform-origin:right}
+@keyframes flipf{from{transform:rotateY(-14deg) translateX(30px);opacity:.3}to{transform:none;opacity:1}}@keyframes flipb{from{transform:rotateY(14deg) translateX(-30px);opacity:.3}to{transform:none;opacity:1}}
+.bhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;border-bottom:1px solid #e6dccf;padding-bottom:8px;margin-bottom:12px}[data-theme=dark] .bhead{border-color:var(--line)}
+.bhead h3{font-family:var(--serif);margin:0;font-size:1.3em;flex:1}.bday{background:var(--blue);color:#fff;border-radius:999px;padding:2px 10px;font-weight:700;font-size:.85em}
+.collage{display:grid;gap:6px}.collage img{width:100%;height:100%;aspect-ratio:1;object-fit:cover;display:block;border-radius:4px;cursor:zoom-in;background:#eee;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.collage.n1 img{aspect-ratio:4/3;max-height:70vh}.collage.n2{grid-template-columns:1fr 1fr}.collage.n2 img{aspect-ratio:3/4}
+.collage.n3{grid-template-columns:2fr 1fr}.collage.n3 img:first-child{grid-row:span 2;aspect-ratio:auto}
+.collage.nmany{grid-template-columns:repeat(3,1fr)}.collage.m0 img:first-child,.collage.m2 img:first-child{grid-column:span 2;grid-row:span 2;aspect-ratio:1}.collage.m1 img:first-child{grid-column:span 3;aspect-ratio:3/2}.collage.m2 img:last-child{grid-column:span 2;aspect-ratio:2/1}
+.bnote{font-family:var(--serif);font-size:1.08em;line-height:1.5;margin:14px 4px 4px;padding-left:12px;border-left:3px solid var(--pink)}.bnote p{margin:0}.bnote figcaption{font-size:.85em;color:var(--mut);margin-top:4px}
+.bfoot{display:flex;justify-content:space-between;margin:14px 0 0;font-size:.9em;color:var(--mut)}
+.bcover{position:relative;background:var(--navy) center/cover no-repeat;display:flex;align-items:flex-end;min-height:440px;padding:0;overflow:hidden;color:#fff}
+.bcover.empty{background:linear-gradient(135deg,var(--blue),var(--navy))}
+.bctext{width:100%;padding:60px 22px 22px;background:linear-gradient(transparent,rgba(0,0,0,.7));text-shadow:0 1px 4px #0008}.bctext small{text-transform:uppercase;letter-spacing:.15em;opacity:.85}
+.bctext h2{font-family:var(--serif);font-size:2.4em;margin:4px 0}.bctext p{margin:2px 0}.bctext .small{color:#fffd}
+.bend{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.bend h2{font-family:var(--serif);font-size:2.4em;margin:0 0 6px}
+.bnav{display:flex;align-items:center;justify-content:space-between;gap:8px}.bnav .small{text-align:center;flex:1}.bnav .btn[disabled]{opacity:.35}
+.bchips .chip.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.gday{margin:18px 0 8px}.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:4px}.pgrid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;cursor:zoom-in;display:block}
+#lightbox{position:fixed;inset:0;background:#0b0b10;z-index:5000;display:none;flex-direction:column;color:#fff}#lightbox.on{display:flex}
+#lbStage{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding:56px 8px 0}#lbImg{max-width:100%;max-height:100%;object-fit:contain;border-radius:4px}
+#lbBar{display:flex;align-items:center;gap:8px;padding:12px 14px calc(14px + env(safe-area-inset-bottom))}#lbCap{flex:1;text-align:center;font-size:.95em}#lbCap .small{color:#fffa}
+#lightbox button{background:#fff2;color:#fff;border:0;border-radius:999px;font:inherit;cursor:pointer;padding:8px 14px}#lbClose{position:absolute;top:calc(10px + env(safe-area-inset-top));right:12px;font-size:20px}#lbDel{position:absolute;top:calc(10px + env(safe-area-inset-top));left:12px;font-size:.85em}
+#lbPrev,#lbNext{font-size:22px;width:48px;height:48px;padding:0!important}
 #modal{position:fixed;inset:0;background:rgba(10,10,20,.45);display:none;align-items:flex-start;justify-content:center;z-index:3000;overflow:auto;padding:30px 12px}#modal.on{display:flex}
 .mbox{background:var(--card);color:var(--ink);border-radius:20px;padding:20px;width:100%;max-width:520px}
 label.fl{display:block;font-size:.9em;color:var(--mut);margin:6px 0}label.fl input,label.fl select,label.fl textarea{display:block;width:100%;margin:2px 0 0}
@@ -145,7 +174,12 @@ label.fl{display:block;font-size:.9em;color:var(--mut);margin:6px 0}label.fl inp
  <div class="panel"><div id="lodgingTable"></div></div>
  <div class="panel"><h3>Daily assumptions (per person per day)</h3><label class="fl">Breakfast (konbini) ¥<input id="dB" type="number" value="500"></label><label class="fl">Meals ¥<input id="dM" type="number" value="4000"></label><label class="fl">Transit ¥<input id="dT" type="number" value="1200"></label><label class="fl">Flight per person (USD)<input id="fPP" type="number" value="2082"></label><button class="btn" id="recalc">Recalculate</button></div></details>
 </section>
-<section id="journal"><div class="panel"><form id="jForm"><input name="date" type="date" required> <input name="photo" type="file" accept="image/*"><textarea name="text" rows="3" style="width:100%" placeholder="What happened today? Best food, funniest moment…" required></textarea><button class="btn primary">Add entry</button> <span id="jStatus" class="small"></span></form></div><div id="jList"></div></section>
+<section id="journal"><div class="panel jadd"><form id="jForm">
+ <div class="jbar"><label class="btn primary jpick">📷 Add photos<input id="jFiles" type="file" accept="image/*" multiple hidden></label><button type="button" class="btn" id="jNoteBtn">✍️ Write a note</button><input id="jDate" name="date" type="date" required aria-label="Which day"></div>
+ <div id="jCompose" style="display:none"><div id="jTray" class="tray"></div><textarea id="jText" name="text" rows="2" style="width:100%" placeholder="Add a few words for this page (optional) — best food, funniest moment…"></textarea><button class="btn primary" id="jSave">Add</button></div>
+ <span id="jStatus" class="small"></span></form>
+ <div id="jViews" style="margin-top:10px"><button type="button" data-v="book" onclick="setBookView('book')">📖 Book</button><button type="button" data-v="grid" onclick="setBookView('grid')">🖼️ All photos</button></div></div>
+ <div id="jList"></div></section>
 
 <!-- HELP -->
 <section id="sos"><div id="sosBox"></div></section>
@@ -160,6 +194,7 @@ label.fl{display:block;font-size:.9em;color:var(--mut);margin:6px 0}label.fl inp
 </nav>
 <div id="modal" onclick="if(event.target===this)closeModal()"><div class="mbox"></div></div><div id="driver"></div>
 
+<div id="lightbox"><button id="lbDel">🗑 Delete</button><button id="lbClose" aria-label="Close">✕</button><div id="lbStage"><img id="lbImg" alt=""></div><div id="lbBar"><button id="lbPrev" aria-label="Previous">‹</button><div id="lbCap"></div><button id="lbNext" aria-label="Next">›</button></div></div>
 <script src="app.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -310,7 +345,7 @@ $('recalc').onclick=renderBudget; $('resetChecks').onclick=()=>{doneC={};save();
 function applyTheme(t){document.documentElement.dataset.theme=t;$('themeBtn').textContent=t==='dark'?'☀️ Light':'🌙 Dark';store.set('theme',t)}
 $('themeBtn').onclick=()=>applyTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
 applyTheme(store.get('theme',matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
-try{journal=JSON.parse(localStorage.getItem('jtp-journal')||'[]')}catch(e){}
+try{journal=JSON.parse(localStorage.getItem('jtp-journal')||'[]');photos=JSON.parse(localStorage.getItem('jtp-photos')||'[]')}catch(e){}
 filters(); render(); startSync(); initJournalForm(); renderJournal();
 // ---- home-screen app: offline support + install tip ----
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));

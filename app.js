@@ -92,7 +92,7 @@ window.editIdea=id=>{const i=ideas.find(x=>x.id===id);if(!i)return;
 function renderCountdown(){const t=todayISO(),el=$('countdown');if(!el)return;
  if(t<TRIP_START){const n=Math.round((new Date(TRIP_START+'T12:00:00')-new Date(t+'T12:00:00'))/864e5);el.textContent=`⏳ ${n} day${n===1?'':'s'} to go`}
  else if(t<=TRIP_END)el.textContent=`📍 Day ${dayNum(t)} of ${TRIP_DATES.length} — have fun!`;
- else el.textContent='🏠 Trip complete — relive it in the Journal';}
+ else el.textContent='🏠 Trip complete — relive it in the Photo book';}
 
 // ---- TODAY ----
 window.setViewDay=d=>{viewDay=d;renderToday()};
@@ -189,25 +189,110 @@ window.taskWho=(id,v)=>{const t=tasks.find(x=>x.id===id);t.who=v;save()};
 window.delTask=id=>{if(confirm('Remove this task?')){tasks=tasks.filter(x=>x.id!==id);save();renderTasks()}};
 window.editTravelers=()=>{const v=prompt('Everyone on the trip, separated by commas:',travelers.join(', '));if(v===null)return;travelers=v.split(',').map(s=>s.trim()).filter(Boolean);save();render()};
 
-// ---- JOURNAL (each entry is its own Firestore doc so photos don't bloat the plan) ----
-let journalCol=null,journalUnsub=null;
+// ---- PHOTO BOOK (journal) ----
+// Everything lives in trips/japan-2027/journal, one Firestore doc each:
+//   kind:'journal' — a note {date,text,who,created} (older entries may also carry one embedded `photo`)
+//   kind:'photo'   — one photo {date,who,created,thumb,full} — thumb is ~720px so the whole book loads quickly
+//   kind:'full'    — the big version of a photo {data}, only downloaded when someone opens that photo
+let journalCol=null,photos=[],photoUnsub=null,bookPage=0,bookView='book',tray=[],fullCache={};
+function jErr(e){const el=$('jStatus');if(el)el.textContent=e.code==='permission-denied'?'📔 The photo book is waiting on a one-time Firebase setting, so photos can\'t be saved yet.':'⚠️ Photo book couldn\'t load: '+e.message}
 function startJournal(db){journalCol=db.collection('trips').doc('japan-2027').collection('journal');
- journalUnsub=journalCol.onSnapshot(s=>{journal=s.docs.map(d=>({_id:d.id,...d.data()}));$('jStatus')&&($('jStatus').textContent='');renderJournal()},
- e=>{const el=$('jStatus');if(el)el.textContent=e.code==='permission-denied'?'📔 The journal is waiting on a one-time Firebase setting, so entries can\'t be saved yet.':'⚠️ Journal couldn\'t load: '+e.message})}
-function shrinkPhoto(file){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>{let w=img.width,h=img.height,m=1100;if(w>m||h>m){const r=Math.min(m/w,m/h);w=Math.round(w*r);h=Math.round(h*r)}
- const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);let q=.72,u=c.toDataURL('image/jpeg',q);while(u.length>700000&&q>.35){q-=.1;u=c.toDataURL('image/jpeg',q)}URL.revokeObjectURL(img.src);res(u)};img.onerror=rej;img.src=URL.createObjectURL(file)})}
-function renderJournal(){const box=$('jList');if(!box)return;if(typeof renderHome==='function'&&navReady)renderHome();
- const by={};journal.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.created||0)-(a.created||0)).forEach(j=>{(by[j.date]=by[j.date]||[]).push(j)});
- box.innerHTML=Object.keys(by).length?Object.entries(by).map(([d,arr])=>`<div class="day"><h3>${dayNum(d)?'Day '+dayNum(d)+' · ':''}${fmtDay(d)}</h3>${arr.map(j=>`<div class="jentry">${j.photo?`<img src="${j.photo}" alt="" loading="lazy">`:''}<p>${esc(j.text).replace(/\n/g,'<br>')}</p><p class="small">— ${esc(j.who||'someone')} · <a href="#" onclick="delJournal('${j._id}');return false">Delete</a></p></div>`).join('')}</div>`).join(''):'<p class="small">No entries yet. During the trip, add a photo and a few lines each day — after the trip this becomes your scrapbook.</p>';}
-window.delJournal=id=>{if(!confirm('Delete this journal entry?'))return;if(journalCol)journalCol.doc(id).delete();else{journal=journal.filter(j=>j._id!==id);try{localStorage.setItem('jtp-journal',JSON.stringify(journal))}catch(e){}renderJournal()}};
+ journalCol.where('kind','==','journal').onSnapshot(s=>{journal=s.docs.map(d=>({_id:d.id,...d.data()}));renderJournal()},jErr);
+ if(typeof curPage!=='undefined'&&curPage==='journal')startPhotos()}
+// photos only download once someone opens the book, so the rest of the app stays fast on mobile data
+function startPhotos(){if(photoUnsub||!journalCol)return;
+ photoUnsub=journalCol.where('kind','==','photo').onSnapshot(s=>{photos=s.docs.map(d=>({_id:d.id,...d.data()}));renderJournal()},jErr)}
+function shrinkPhoto(file,max=1100,limit=700000){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>{let w=img.width,h=img.height;if(w>max||h>max){const r=Math.min(max/w,max/h);w=Math.round(w*r);h=Math.round(h*r)}
+ const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);let q=.8,u=c.toDataURL('image/jpeg',q);while(u.length>limit&&q>.3){q-=.08;u=c.toDataURL('image/jpeg',q)}URL.revokeObjectURL(img.src);res(u)};img.onerror=()=>rej(new Error('couldn\'t read '+file.name));img.src=URL.createObjectURL(file)})}
+const okSrc=u=>/^data:image\/|^https:\/\//.test(u||'')?u:'';
+// all photos in book order, older single-photo entries included
+function allPhotos(){const old=journal.filter(j=>j.photo).map(j=>({_id:j._id,legacy:1,date:j.date,who:j.who,created:j.created,thumb:j.photo}));
+ return photos.concat(old).filter(p=>okSrc(p.thumb)).sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(a.created||0)-(b.created||0))}
+function bookDays(){const s=new Set();allPhotos().forEach(p=>s.add(p.date));journal.forEach(j=>{if((j.text||'').trim())s.add(j.date)});return [...s].filter(Boolean).sort()}
+const dayLabel=d=>`${dayNum(d)?'Day '+dayNum(d)+' · ':''}${fmtDay(d)}`;
+function cityOf(d){try{const h=typeof hotelFor==='function'&&hotelFor(d);return h?(h.stop||''):''}catch(e){return ''}}
+
+function renderJournal(){const box=$('jList');if(typeof renderHome==='function'&&navReady)renderHome();if(!box)return;
+ const ps=allPhotos(),days=bookDays();
+ document.querySelectorAll('#jViews button').forEach(b=>b.classList.toggle('on',b.dataset.v===bookView));
+ if(!days.length){box.innerHTML=`<div class="bpage bcover empty"><div class="bctext"><small>Our trip</small><h2>Japan 2027</h2><p>${fmtDay(TRIP_START)} – ${fmtDay(TRIP_END)}</p></div></div><p class="small" style="text-align:center">The book is empty. Tap <b>Add photos</b> and pick as many as you like — each day becomes a page.</p>`;return}
+ if(bookView==='grid'){box.innerHTML=days.map(d=>{const dp=ps.filter(p=>p.date===d);return dp.length?`<h3 class="gday">${dayLabel(d)} <span class="small">${dp.length} photo${dp.length>1?'s':''}</span></h3><div class="pgrid">${dp.map(p=>thumbImg(p,ps)).join('')}</div>`:''}).join('');return}
+ const pages=['cover',...days,'end'];bookPage=Math.max(0,Math.min(bookPage,pages.length-1));const pg=pages[bookPage];
+ let html;
+ if(pg==='cover'){const c=ps[0];html=`<div class="bpage bcover"${c?` style="background-image:url('${okSrc(c.thumb)}')"`:''}><div class="bctext"><small>Our trip</small><h2>Japan 2027</h2><p>${fmtDay(TRIP_START)} – ${fmtDay(TRIP_END)}</p><p class="small">${ps.length} photo${ps.length===1?'':'s'} · ${days.length} day${days.length===1?'':'s'}</p></div></div>`}
+ else if(pg==='end'){const who=[...new Set(ps.map(p=>p.who).concat(journal.map(j=>j.who)).filter(Boolean))];html=`<div class="bpage bend"><h2>おわり</h2><p>The end — until next time.</p>${who.length?`<p class="small">Photos and words by ${who.map(esc).join(', ')}</p>`:''}<button class="btn" onclick="bookGo(0)">Back to the cover</button></div>`}
+ else{const dp=ps.filter(p=>p.date===pg),notes=journal.filter(j=>j.date===pg&&(j.text||'').trim()).sort((a,b)=>(a.created||0)-(b.created||0)),city=cityOf(pg);
+  const n=dp.length,cls=n<=3?'n'+n:'nmany m'+(n%3);
+  html=`<div class="bpage"><div class="bhead"><span class="bday">${dayNum(pg)?'Day '+dayNum(pg):'Extra'}</span><h3>${fmtDay(pg)}</h3>${city?`<span class="small">${esc(city)}</span>`:''}</div>
+   ${n?`<div class="collage ${cls}">${dp.map(p=>thumbImg(p,ps)).join('')}</div>`:''}
+   ${notes.map(j=>`<figure class="bnote"><p>${esc(j.text).replace(/\n/g,'<br>')}</p><figcaption>— ${esc(j.who||'someone')} <a href="#" onclick="delJournal('${j._id}');return false" class="small">delete</a></figcaption></figure>`).join('')}
+   <p class="bfoot"><a href="#" onclick="addToDay('${pg}');return false">＋ Add to this page</a><span>${bookPage} / ${pages.length-2}</span></p></div>`}
+ const chips=pages.map((p,i)=>`<button class="chip${i===bookPage?' on':''}" onclick="bookGo(${i})">${p==='cover'?'Cover':p==='end'?'End':(dayNum(p)?'Day '+dayNum(p):fmtDay(p))}</button>`).join('');
+ box.innerHTML=`<div id="book" class="book">${html}</div>
+  <div class="bnav"><button class="btn" onclick="bookGo(${bookPage-1})" ${bookPage?'':'disabled'}>‹ Prev</button><span class="small">${pg==='cover'?'Cover':pg==='end'?'The end':dayLabel(pg)}</span><button class="btn" onclick="bookGo(${bookPage+1})" ${bookPage<pages.length-1?'':'disabled'}>Next ›</button></div>
+  <div class="chips bchips">${chips}</div>`;
+ swipe($('book'),dir=>bookGo(bookPage+dir));
+ const on=document.querySelector('.bchips .chip.on');if(on)on.scrollIntoView({block:'nearest',inline:'center'})}
+function thumbImg(p,ps){return `<img src="${okSrc(p.thumb)}" alt="" loading="lazy" onclick="openPhoto(${ps.indexOf(p)})">`}
+window.bookGo=i=>{const n=bookDays().length+2;if(i<0||i>=n)return;const back=i<bookPage;bookPage=i;renderJournal();const b=$('book');if(b){b.classList.add(back?'flipb':'flipf')}};
+window.setBookView=v=>{bookView=v;renderJournal()};
+window.addToDay=d=>{$('jDate').value=d;$('jFiles').click()};
+function swipe(el,cb){if(!el)return;let x0=null,y0=0;el.addEventListener('touchstart',e=>{x0=e.touches[0].clientX;y0=e.touches[0].clientY},{passive:true});
+ el.addEventListener('touchend',e=>{if(x0===null)return;const dx=e.changedTouches[0].clientX-x0,dy=e.changedTouches[0].clientY-y0;x0=null;if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5)cb(dx<0?1:-1)},{passive:true})}
+
+// ---- full-screen viewer ----
+let lbList=[],lbIdx=0;
+window.openPhoto=i=>{lbList=allPhotos();lbIdx=i;$('lightbox').classList.add('on');showLb()};
+function showLb(){const p=lbList[lbIdx];if(!p)return closeLb();const im=$('lbImg');im.src=okSrc(fullCache[p._id]||p.thumb);
+ $('lbCap').innerHTML=`${dayLabel(p.date)}${p.who?' · 📷 '+esc(p.who):''}<br><span class="small">${lbIdx+1} of ${lbList.length}</span>`;
+ $('lbPrev').style.visibility=lbIdx?'':'hidden';$('lbNext').style.visibility=lbIdx<lbList.length-1?'':'hidden';
+ if(p.full&&!fullCache[p._id]&&journalCol){const id=p._id;journalCol.doc(p.full).get().then(d=>{const u=d.exists&&d.data().data;if(u){fullCache[id]=u;if(lbList[lbIdx]&&lbList[lbIdx]._id===id)im.src=okSrc(u)}}).catch(()=>{})}}
+function closeLb(){$('lightbox').classList.remove('on');$('lbImg').src=''}
+function lbStep(d){const j=lbIdx+d;if(j>=0&&j<lbList.length){lbIdx=j;showLb()}}
+function initLightbox(){const lb=$('lightbox');if(!lb)return;$('lbClose').onclick=closeLb;$('lbPrev').onclick=()=>lbStep(-1);$('lbNext').onclick=()=>lbStep(1);
+ lb.onclick=e=>{if(e.target===lb||e.target.id==='lbStage')closeLb()};swipe(lb,lbStep);
+ $('lbDel').onclick=()=>{const p=lbList[lbIdx];if(!p||!confirm('Delete this photo from the book?'))return;
+  if(journalCol){if(p.legacy)journalCol.doc(p._id).update({photo:''});else{journalCol.doc(p._id).delete();if(p.full)journalCol.doc(p.full).delete()}}
+  else{photos=photos.filter(x=>x._id!==p._id);saveLocalBook()}
+  lbList.splice(lbIdx,1);if(lbIdx>=lbList.length)lbIdx=lbList.length-1;lbList.length?showLb():closeLb()};
+ document.addEventListener('keydown',e=>{if(lb.classList.contains('on')){if(e.key==='Escape')closeLb();if(e.key==='ArrowLeft')lbStep(-1);if(e.key==='ArrowRight')lbStep(1)}
+  else if(typeof curPage!=='undefined'&&curPage==='journal'&&bookView==='book'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){if(e.key==='ArrowLeft')bookGo(bookPage-1);if(e.key==='ArrowRight')bookGo(bookPage+1)}})}
+
+window.delJournal=id=>{if(!confirm('Delete this note?'))return;if(journalCol)journalCol.doc(id).delete();else{journal=journal.filter(j=>j._id!==id);saveLocalBook();renderJournal()}};
+function saveLocalBook(){try{localStorage.setItem('jtp-journal',JSON.stringify(journal));localStorage.setItem('jtp-photos',JSON.stringify(photos))}catch(e){}}
+
+// ---- adding photos: pick many at once, preview, then save them all ----
+function renderTray(){const t=$('jTray'),btn=$('jSave');if(!t)return;
+ t.innerHTML=tray.map((x,i)=>`<div class="tthumb"><img src="${x.url}" alt=""><button type="button" onclick="trayDrop(${i})" aria-label="Remove">×</button></div>`).join('');
+ const d=$('jDate').value;btn.textContent=tray.length?`Add ${tray.length} photo${tray.length>1?'s':''} to ${dayNum(d)?'Day '+dayNum(d):fmtDay(d)}`:'Add note';
+ $('jCompose').style.display=tray.length||$('jText').value.trim()||$('jCompose').dataset.open?'':'none'}
+window.trayDrop=i=>{URL.revokeObjectURL(tray[i].url);tray.splice(i,1);renderTray()};
 function initJournalForm(){const f=$('jForm');if(!f)return;const t=todayISO();f.date.value=(t>=TRIP_START&&t<=TRIP_END)?t:TRIP_START;
- f.onsubmit=async e=>{e.preventDefault();if(!me)return pickMe(()=>f.requestSubmit());const btn=f.querySelector('button');btn.disabled=true;btn.textContent='Saving…';
-  try{const file=f.photo.files[0];const entry={kind:'journal',date:f.date.value,text:f.text.value.trim(),who:me,created:Date.now(),photo:file?await shrinkPhoto(file):''};
-   if(journalCol)await Promise.race([journalCol.doc('journal-'+entry.created).set(entry),new Promise(r=>setTimeout(r,1500))]); // offline: queued, resolves later
-   else{journal.push({_id:'journal-'+entry.created,...entry});try{localStorage.setItem('jtp-journal',JSON.stringify(journal))}catch(e){}renderJournal()}
-   f.text.value='';f.photo.value='';}
+ initLightbox();
+ $('jFiles').onchange=e=>{[...e.target.files].forEach(file=>{if(/^image\//.test(file.type)||/\.(heic|heif|jpe?g|png|webp)$/i.test(file.name))tray.push({file,url:URL.createObjectURL(file)})});e.target.value='';renderTray()};
+ $('jNoteBtn').onclick=()=>{$('jCompose').dataset.open='1';renderTray();$('jText').focus()};
+ f.date.onchange=renderTray;$('jText').oninput=renderTray;
+ f.onsubmit=async e=>{e.preventDefault();if(!me)return pickMe(()=>f.requestSubmit());
+  const text=$('jText').value.trim(),date=f.date.value;if(!tray.length&&!text)return;
+  const btn=$('jSave'),st=$('jStatus');btn.disabled=true;let done=0,failed=[];
+  const put=(id,doc)=>journalCol?Promise.race([journalCol.doc(id).set(doc),new Promise(r=>setTimeout(r,1500))]):Promise.resolve(); // offline: queued, syncs later
+  try{const base=Date.now();
+   if(text){const entry={kind:'journal',date,text,who:me,created:base};await put('journal-'+base,entry);if(!journalCol){journal.push({_id:'journal-'+base,...entry})}}
+   for(let i=0;i<tray.length;i++){const x=tray[i];btn.textContent=`Adding ${i+1} of ${tray.length}…`;
+    try{const id=`photo-${base}-${i}`,created=base+i+1;
+     const thumb=await shrinkPhoto(x.file,720,160000),full=await shrinkPhoto(x.file,1600,900000);
+     await put(id+'-full',{kind:'full',date,data:full});
+     const doc={kind:'photo',date,who:me,created,thumb,full:id+'-full'};await put(id,doc);
+     if(!journalCol)photos.push({_id:id,...doc,full:''});done++}
+    catch(err){failed.push(x.file.name)}}
+   if(!journalCol)saveLocalBook();
+   tray.forEach(x=>URL.revokeObjectURL(x.url));tray=[];$('jText').value='';delete $('jCompose').dataset.open;
+   st.textContent=failed.length?`⚠️ Couldn't add ${failed.length} photo${failed.length>1?'s':''} (${failed.slice(0,3).join(', ')}) — try a JPG or PNG.`:(done?`✓ Added ${done} photo${done>1?'s':''}`:'✓ Note added');
+   setTimeout(()=>{if(st.textContent.startsWith('✓'))st.textContent=''},4000);
+   const days=bookDays();bookPage=Math.max(1,days.indexOf(date)+1);bookView='book';renderJournal()}
   catch(err){alert('Could not save: '+err.message)}
-  btn.disabled=false;btn.textContent='Add entry'}}
+  btn.disabled=false;renderTray()};
+ renderTray()}
 
 
 
@@ -325,7 +410,7 @@ const HERO={file:'Itsukushima-jinja_torii_at_sunset%2C_Miyajima%2C_Japan%2C_2024
 function heroURL(){const w=(window.innerWidth||400)*(window.devicePixelRatio||1)>1300?1920:1280;return `${HERO.base}${HERO.file}/${w}px-${HERO.file}`}
 const PAGES={home:{t:'Japan Trip',tab:'home'},today:{t:'Day by day',tab:'today'},ideas:{t:'Places',tab:'ideas'},map:{sec:'placesMap',t:'Places',tab:'ideas'},
  plan:{t:'Plan',tab:'plan'},travel:{t:'Flights & trains',tab:'plan',back:'plan'},hotels:{t:'Hotels',tab:'plan',back:'plan'},bookings:{t:'Booking deadlines',tab:'plan',back:'plan'},
- checklists:{t:'Checklists',tab:'plan',back:'plan'},sakura:{t:'Cherry blossoms',tab:'plan',back:'plan'},budget:{t:'Budget & souvenirs',tab:'plan',back:'plan'},journal:{t:'Trip journal',tab:'plan',back:'plan'},
+ checklists:{t:'Checklists',tab:'plan',back:'plan'},sakura:{t:'Cherry blossoms',tab:'plan',back:'plan'},budget:{t:'Budget & souvenirs',tab:'plan',back:'plan'},journal:{t:'Photo book',tab:'plan',back:'plan'},
  sos:{t:'Help & phrases',tab:'sos'}};
 const ALIAS={prep:'checklists',itinerary:'today',travelers:'checklists'};
 let curPage='home';
@@ -336,6 +421,7 @@ function go(id,noHash){id=ALIAS[id]||id;const pg=PAGES[id]||PAGES.home;if(!PAGES
  document.body.classList.toggle('home',id==='home');window.scrollTo(0,0);
  if(id==='map')setTimeout(()=>{if(typeof initMap==='function')initMap();if(typeof mapObj!=='undefined'&&mapObj)mapObj.invalidateSize()},120);
  if(id==='today')setDayView(dayView);
+ if(id==='journal'&&typeof startPhotos==='function')startPhotos();
  if(!noHash&&location.hash.slice(1)!==id){try{history.pushState(null,'','#'+id)}catch(e){location.hash=id}}}
 window.go=go;
 window.addEventListener('popstate',()=>go(location.hash.slice(1)||'home',true));
@@ -366,12 +452,12 @@ function renderHome(){const hero=$('hero');if(!hero)return;hero.style.background
   ['✈️','Flights & trains',fl?`${esc(fl.airline)} ${esc(fl.number)}`:'Add flight details','travel'],['🏨','Hotels',`${filledH} of ${hotels.length} filled in`,'hotels'],
   ['⏰','Deadlines',nd.length?`${nd.length} coming up`:'All caught up','bookings'],['✅','Checklists',`${doneT} of ${tasks.length} done`,'checklists'],
   ['💴','Budget','Spending & souvenirs','budget'],['🌸','Blossoms',Object.keys(sakura).length?'Forecast added':'Forecasts mid-Dec','sakura'],
-  ['📔','Journal',journal.length?`${journal.length} entries`:'Photos & notes','journal'],['🆘','Help','Emergency & phrases','sos']];
+  ['📔','Photo book',photos.length?`${photos.length+journal.filter(j=>j.photo).length} photos`:'Photos & notes','journal'],['🆘','Help','Emergency & phrases','sos']];
  $('tiles').innerHTML=tiles.map(([ic,t1,sub,id])=>`<button class="tile" onclick="go('${id}')"><span class="ic">${ic}</span><span><b>${t1}</b><small>${sub}</small></span></button>`).join('')}
 function renderPlan(){const box=$('planList');if(!box)return;const nd=nextDeadlines(),fl=flights.find(f=>f.number);
  const rows=[['✈️','Flights & trains',fl?`${esc(fl.airline)} ${esc(fl.number)} · JR Pass check · luggage`:'Flights, train legs, JR Pass check, luggage','travel'],['🏨','Hotels',`${hotels.filter(h=>h.name).length} of ${hotels.length} filled in · show-to-driver cards`,'hotels'],
   ['⏰','Booking deadlines',nd.length?`${nd.length} coming up · add to calendar`:'All caught up','bookings'],['✅','Checklists',`${tasks.filter(x=>x.done).length} of ${tasks.length} done · packing list`,'checklists'],
-  ['💴','Budget & souvenirs','Estimates, spending, souvenir list','budget'],['🌸','Cherry blossoms','Bloom forecast for each city','sakura'],['📔','Trip journal','Photos and notes from each day','journal']];
+  ['💴','Budget & souvenirs','Estimates, spending, souvenir list','budget'],['🌸','Cherry blossoms','Bloom forecast for each city','sakura'],['📔','Photo book','Add photos in bulk · a page for each day','journal']];
  box.innerHTML=`<div class="list">${rows.map(([ic,t1,sub,id])=>`<button onclick="go('${id}')"><span class="ic">${ic}</span><span class="txt">${t1}<small>${sub}</small></span><span class="chev">›</span></button>`).join('')}</div>`}
 
 let navReady=false;
